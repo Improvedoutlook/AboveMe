@@ -1,0 +1,727 @@
+﻿@page "/"
+
+@using Microsoft.JSInterop
+@using System.Net.Http
+@using System.Text.Json.Serialization
+
+<PageTitle>Home</PageTitle>
+
+<div class="aboveme-form">
+    <div class="form-group">
+        <label for="country">Country</label>
+        <select id="country" class="form-control" @bind="selectedCountry">
+            <option value="">Select Country</option>
+            @foreach (var country in Countries)
+            {
+                <option value="@country">@country</option>
+            }
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="timezone">Timezone</label>
+        <select id="timezone" class="form-control" @bind="selectedTimezone">
+            <option value="">Select Timezone</option>
+            @foreach (var tz in Timezones)
+            {
+                <option value="@tz.Id">@tz.Display @("(" + tz.Description + ")")</option>
+            }
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="city">City</label>
+        @if (Cities.Count > 0)
+        {
+            <select id="city" class="form-control" @bind="selectedCity">
+                <option value="">Select City</option>
+                @foreach (var city in Cities)
+                {
+                    <option value="@city">@city</option>
+                }
+            </select>
+        }
+        else
+        {
+            <input id="city" class="form-control" type="text" @bind="selectedCity" placeholder="Enter your city" />
+        }
+    </div>
+
+
+    <div class="form-group form-check">
+        <input type="checkbox" class="form-check-input" id="shareLocation" @bind="shareLocation" />
+        <label class="form-check-label" for="shareLocation">Share my location</label>
+    </div>
+    <div class="form-group mt-3">
+        <button class="btn btn-primary" @onclick="ToggleMoonPhases">@((showMoonPhases ? "Hide" : "Show") + " Moon Phases")</button>
+    </div>
+    @if (showMoonPhases)
+    {
+        <div class="moon-phase-display mt-4 text-center">
+            @if (isLoadingAstronomyData)
+            {
+                <div class="text-info">Loading moon phase...</div>
+            }
+            else if (astronomyData == null)
+            {
+                <div class="text-warning">Unable to load moon phase data. Please check your location and try again.</div>
+            }
+            else
+            {
+                <img src="@($"moonphases/{astronomyData.MoonPhase?.Replace(" ", string.Empty).ToLower()}.png")" alt="Moon phase" class="moon-img" style="max-width:120px;" />
+                <div class="moon-phase-label mt-2">@astronomyData.MoonPhase</div>
+                <div class="moon-phase-details mt-2">
+                    <span>Moonrise: <b>@astronomyData.Moonrise</b></span><br />
+                    <span>Moonset: <b>@astronomyData.Moonset</b></span><br />
+                    <span>Moon Illumination: <b>@astronomyData.MoonIlluminationPercentage</b></span><br />
+                    <span>Sunrise: <b>@astronomyData.Sunrise</b></span><br />
+                    <span>Sunset: <b>@astronomyData.Sunset</b></span><br />
+                    <span>Solar Noon: <b>@astronomyData.SolarNoon</b></span><br />
+                    <span>Day Length: <b>@astronomyData.DayLength</b></span><br />
+                    <span>Current Time: <b>@astronomyData.CurrentTime</b></span>
+                </div>
+            }
+        </div>
+    }
+    <div class="form-group mt-3">
+        <button class="btn btn-primary" @onclick="ToggleLunarEclipse">@((showLunarEclipse ? "Hide" : "Show") + " Next Lunar Eclipse")</button>
+    </div>
+    @if (showLunarEclipse)
+    {
+        <div class="lunar-eclipse-display mt-4 text-center">
+            @if (isLoadingAstronomyData)
+            {
+                <div class="text-info">Loading lunar eclipse data...</div>
+            }
+            else if (!string.IsNullOrEmpty(LunarEclipseError))
+            {
+                <div class="text-warning" style="color: #ffc107;">@LunarEclipseError</div>
+            }
+            else if (astronomyData == null)
+            {
+                <div class="text-warning">Unable to load lunar eclipse data. Please check your location and try again.</div>
+            }
+            else
+            {
+                <div class="lunar-eclipse-label mt-2" style="color:#fff;">Next visible lunar eclipse: <b>@NextLunarEclipseDate</b></div>
+            }
+        </div>
+    }
+    <div class="form-group mt-3">
+        <button class="btn btn-primary" @onclick="ToggleConstellations">@((showConstellations ? "Hide" : "Show") + " Visible Constellations")</button>
+    </div>
+    @if (showConstellations)
+    {
+        <div class="constellations-display mt-4 text-center">
+            @if (isLoadingAstronomyData)
+            {
+                <div class="text-info">Loading constellations...</div>
+            }
+            else if (!string.IsNullOrEmpty(ConstellationError))
+            {
+                <div class="text-warning" style="color: #ffc107;">@ConstellationError</div>
+            }
+            else if (astronomyData == null)
+            {
+                <div class="text-warning">Unable to load constellation data. Please check your location and try again.</div>
+            }
+            else
+            {
+                <img src="starry.png" alt="Starry sky" style="max-width:100px; margin-bottom:1rem;" />
+                <ul class="list-unstyled" style="color:#fff;">
+                    @foreach (var constellation in VisibleConstellations)
+                    {
+                        <li>@constellation</li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+    <div class="form-group mt-3">
+        <button class="btn btn-primary" @onclick="ToggleComets">@((showComets ? "Hide" : "Show") + " Next Comets")</button>
+    </div>
+    @if (showComets)
+    {
+        <div class="comets-display mt-4 text-center">
+            @if (isLoadingAstronomyData)
+            {
+                <div class="text-info">Loading comets...</div>
+            }
+            else if (!string.IsNullOrEmpty(CometError))
+            {
+                <div class="text-warning" style="color: #ffc107;">@CometError</div>
+            }
+            else if (NextComets == null || NextComets.Count == 0)
+            {
+                <div class="text-warning">No comet data available for your location.</div>
+            }
+            else
+            {
+                <ul class="list-unstyled" style="color:#fff;">
+                    @foreach (var comet in NextComets)
+                    {
+                        <li><b>@comet.Name</b> — Next visible: @comet.NextDate</li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<string> Countries = new() { "United States", "Canada", "United Kingdom", "Australia" };
+    private List<string> Cities = new();
+    private List<(string Id, string Display, string Description)> Timezones = new()
+    {
+        ("Eastern Standard Time", "Eastern", "UTC-5"),
+        ("Central Standard Time", "Central", "UTC-6"),
+        ("Mountain Standard Time", "Mountain", "UTC-7"),
+        ("Pacific Standard Time", "Pacific", "UTC-8"),
+        ("Greenwich Mean Time", "GMT", "UTC+0"),
+        ("Central European Time", "CET", "UTC+1"),
+        ("Australian Eastern Time", "AET", "UTC+10")
+    };
+    private string? selectedCountry;
+    private string? selectedCity;
+    private string? selectedTimezone;
+    private bool shareLocation;
+    private bool showMoonPhases;
+    private bool showLunarEclipse;
+    private bool showConstellations;
+    private bool showComets;
+    private List<string> VisibleConstellations = new();
+    private List<CometInfo> NextComets = new();
+    private string ConstellationError = string.Empty;
+    private string CometError = string.Empty;
+    private string NextLunarEclipseDate = string.Empty;
+    private string LunarEclipseError = string.Empty;
+    private string? ipGeoApiKey;
+    private string? astronomyApiKey;
+    private string? nasaApiKey;
+    private string? userLatitude;
+    private string? userLongitude;
+    private bool isLoadingAstronomyData;
+    private AstronomyData? astronomyData;
+
+    // Caching fields
+    private string? lastCountry;
+    private string? lastCity;
+    private string? lastTimezone;
+    private string? lastLatitude;
+    private string? lastLongitude;
+    private AstronomyData? cachedAstronomyData;
+
+    // NASA API Caching fields
+    private object? lastNasaQueryParams; // Use a tuple or class if you want to track more params
+
+    [Inject] IJSRuntime JS { get; set; } = default!;
+    @inject HttpClient Http
+
+    public class GeolocationResult
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+        public string? Country { get; set; }
+        public string? City { get; set; }
+        public string? Timezone { get; set; }
+    }
+
+    public class AstronomyData
+    {
+        [JsonPropertyName("moon_phase")]
+        public string? MoonPhase { get; set; }
+        [JsonPropertyName("moonrise")]
+        public string? Moonrise { get; set; }
+        [JsonPropertyName("moonset")]
+        public string? Moonset { get; set; }
+        [JsonPropertyName("sunrise")]
+        public string? Sunrise { get; set; }
+        [JsonPropertyName("sunset")]
+        public string? Sunset { get; set; }
+        [JsonPropertyName("current_time")]
+        public string? CurrentTime { get; set; }
+        [JsonPropertyName("solar_noon")]
+        public string? SolarNoon { get; set; }
+        [JsonPropertyName("day_length")]
+        public string? DayLength { get; set; }
+        [JsonPropertyName("country_code")]
+        public string? CountryCode { get; set; }
+        [JsonPropertyName("location")]
+        public object? Location { get; set; }
+        [JsonPropertyName("moon_illumination_percentage")]
+        public string? MoonIlluminationPercentage { get; set; }
+        // Add more fields as needed
+    }
+
+    public class CometInfo
+    {
+        public string Name { get; set; }
+        public string NextDate { get; set; }
+        public CometInfo(string name, string nextDate)
+        {
+            Name = name;
+            NextDate = nextDate;
+        }
+    }
+
+    public class NasaApodData
+    {
+        [JsonPropertyName("copyright")]
+        public string? Copyright { get; set; }
+        [JsonPropertyName("date")]
+        public string? Date { get; set; }
+        [JsonPropertyName("explanation")]
+        public string? Explanation { get; set; }
+        [JsonPropertyName("hdurl")]
+        public string? HdUrl { get; set; }
+        [JsonPropertyName("media_type")]
+        public string? MediaType { get; set; }
+        [JsonPropertyName("service_version")]
+        public string? ServiceVersion { get; set; }
+        [JsonPropertyName("title")]
+        public string? Title { get; set; }
+        [JsonPropertyName("url")]
+        public string? Url { get; set; }
+    }
+
+    private string NasaError = string.Empty;
+    private NasaApodData? cachedNasaData;
+    private NasaApodData? nasaData;
+
+    protected override void OnInitialized()
+    {
+        selectedCountry = "";
+        selectedCity = "";
+        selectedTimezone = "";
+        shareLocation = false;
+        showMoonPhases = false;
+        showLunarEclipse = false;
+        showConstellations = false;
+        showComets = false;
+        ipGeoApiKey = Environment.GetEnvironmentVariable("IPGEO_API_KEY");
+        // Use the provided ipgeolocation API key directly
+        astronomyApiKey = "7b308a582e5043d8a59ae2edcd5296d8";
+        // NASA API key: set via env var for security, fallback to provided key for demo only
+        nasaApiKey = Environment.GetEnvironmentVariable("NASA_API_KEY") ?? "DCOJ8SYkVW49IyCH8mhZJuGamWTIYfW2Hhd6afgX";
+    }
+
+    private bool IsQueryChanged()
+    {
+        return selectedCountry != lastCountry ||
+               selectedCity != lastCity ||
+               selectedTimezone != lastTimezone ||
+               userLatitude != lastLatitude ||
+               userLongitude != lastLongitude;
+    }
+
+    private void UpdateLastQuery()
+    {
+        lastCountry = selectedCountry;
+        lastCity = selectedCity;
+        lastTimezone = selectedTimezone;
+        lastLatitude = userLatitude;
+        lastLongitude = userLongitude;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(selectedCountry))
+        {
+            Cities = selectedCountry switch
+            {
+                "United States" => new() { "New York", "Los Angeles", "Chicago" },
+                "Canada" => new() { "Toronto", "Vancouver", "Montreal" },
+                "United Kingdom" => new() { "London", "Manchester", "Birmingham" },
+                "Australia" => new() { "Sydney", "Melbourne", "Brisbane" },
+                _ => new()
+            };
+            await FetchAstronomyDataAsync();
+        }
+        else if (!string.IsNullOrEmpty(selectedTimezone))
+        {
+            Cities = new();
+            await FetchAstronomyDataAsync();
+        }
+        else
+        {
+            Cities = new();
+        }
+    }
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && shareLocation && JS != null)
+        {
+            var pos = await JS.InvokeAsync<GeolocationResult>("getUserLocation");
+            if (pos != null)
+            {
+                userLatitude = pos.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                userLongitude = pos.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                await FetchAstronomyDataAsync();
+            }
+        }
+    }
+
+    private void ToggleMoonPhases()
+    {
+        showMoonPhases = !showMoonPhases;
+        if (showMoonPhases && astronomyData == null)
+        {
+            // Try to fetch if not already loaded
+            _ = FetchAstronomyDataAsync();
+        }
+    }
+
+    // Maps API moon phase values to image filenames in wwwroot/moonphases
+    private string GetMoonPhaseImage(string? moonPhase)
+    {
+        if (string.IsNullOrWhiteSpace(moonPhase)) return "moonphases/newmoon.png";
+        // Map API values to image filenames
+        return moonPhase.ToUpperInvariant() switch
+        {
+            "NEW_MOON" => "moonphases/newmoon.png",
+            "WAXING_CRESCENT" => "moonphases/waxingcrescent.png",
+            "FIRST_QUARTER" => "moonphases/firstquarter.png",
+            "WAXING_GIBBOUS" => "moonphases/waxinggibbous.png",
+            "FULL_MOON" => "moonphases/fullmoon.png",
+            "WANING_GIBBOUS" => "moonphases/waninggibbous.png",
+            "LAST_QUARTER" => "moonphases/lastquarter.png",
+            "WANING_CRESCENT" => "moonphases/waningcrescent.png",
+            _ => "moonphases/newmoon.png"
+        };
+    }
+
+    private (string, string) GetCurrentMoonPhase()
+    {
+        // Simple moon phase calculation based on current date
+        var phases = new[]
+        {
+            ("New Moon", "moonphases/newmoon.png"),
+            ("Waxing Crescent", "moonphases/waxingcrescent.png"),
+            ("First Quarter", "moonphases/firstquarter.png"),
+            ("Waxing Gibbous", "moonphases/waxinggibbous.png"),
+            ("Full Moon", "moonphases/fullmoon.png"),
+            ("Waning Gibbous", "moonphases/waninggibbous.png"),
+            ("Last Quarter", "moonphases/lastquarter.png"),
+            ("Waning Crescent", "moonphases/waningcrescent.png")
+        };
+        var now = DateTime.UtcNow;
+        var synodicMonth = 29.53058867;
+        var knownNewMoon = new DateTime(2000, 1, 6, 18, 14, 0, DateTimeKind.Utc); // Reference new moon
+        var daysSince = (now - knownNewMoon).TotalDays;
+        var currentPhase = daysSince % synodicMonth;
+        var phaseIndex = (int)Math.Floor((currentPhase / synodicMonth) * phases.Length) % phases.Length;
+        return phases[phaseIndex];
+    }
+
+    private void ToggleLunarEclipse()
+    {
+        showLunarEclipse = !showLunarEclipse;
+        if (showLunarEclipse && astronomyData == null)
+        {
+            _ = FetchAstronomyDataAsync();
+        }
+        if (showLunarEclipse)
+        {
+            if (string.IsNullOrEmpty(selectedCountry) && string.IsNullOrEmpty(selectedTimezone))
+            {
+                NextLunarEclipseDate = string.Empty;
+                LunarEclipseError = "Please select a Country or Timezone";
+            }
+            else
+            {
+                LunarEclipseError = string.Empty;
+                // Optionally, update NextLunarEclipseDate from astronomyData if available in future
+            }
+        }
+    }
+
+    private string GetNextLunarEclipse(string? country, string? timezone)
+    {
+        // Example: Map by country/timezone. In a real app, use astronomy APIs or data.
+        DateTime dt;
+        if (!string.IsNullOrEmpty(country))
+        {
+            dt = country switch
+            {
+                "United States" => new DateTime(2025, 9, 7),
+                "Canada" => new DateTime(2025, 9, 7),
+                "United Kingdom" => new DateTime(2025, 9, 7),
+                "Australia" => new DateTime(2025, 3, 14),
+                _ => new DateTime(2025, 9, 7)
+            };
+        }
+        else if (!string.IsNullOrEmpty(timezone))
+        {
+            dt = timezone switch
+            {
+                "Eastern Standard Time" => new DateTime(2025, 9, 7),
+                "Central Standard Time" => new DateTime(2025, 9, 7),
+                "Mountain Standard Time" => new DateTime(2025, 9, 7),
+                "Pacific Standard Time" => new DateTime(2025, 9, 7),
+                "Greenwich Mean Time" => new DateTime(2025, 9, 7),
+                "Central European Time" => new DateTime(2025, 9, 7),
+                "Australian Eastern Time" => new DateTime(2025, 3, 14),
+                _ => new DateTime(2025, 9, 7)
+            };
+        }
+        else
+        {
+            return string.Empty;
+        }
+        return dt.ToString("dd/MM/yyyy");
+    }
+
+    private void ToggleConstellations()
+    {
+        showConstellations = !showConstellations;
+        if (showConstellations && astronomyData == null)
+        {
+            _ = FetchAstronomyDataAsync();
+        }
+        // Optionally, update VisibleConstellations from astronomyData if available in future
+    }
+
+    private List<string> GetVisibleConstellations(string? country, string? timezone)
+    {
+        // Example: Map by country/timezone. In a real app, use astronomy APIs or data.
+        if (!string.IsNullOrEmpty(country))
+        {
+            return country switch
+            {
+                "United States" => new() { "Orion", "Ursa Major", "Cassiopeia", "Cygnus" },
+                "Canada" => new() { "Draco", "Cepheus", "Ursa Minor", "Perseus" },
+                "United Kingdom" => new() { "Pegasus", "Andromeda", "Perseus", "Cassiopeia" },
+                "Australia" => new() { "Crux", "Centaurus", "Carina", "Pavo" },
+                _ => new() { "Ursa Major", "Cassiopeia", "Cygnus", "Perseus" }
+            };
+        }
+        else if (!string.IsNullOrEmpty(timezone))
+        {
+            return timezone switch
+            {
+                "Eastern Standard Time" => new() { "Orion", "Gemini", "Canis Major" },
+                "Central Standard Time" => new() { "Leo", "Virgo", "Cancer" },
+                "Mountain Standard Time" => new() { "Aquila", "Lyra", "Sagittarius" },
+                "Pacific Standard Time" => new() { "Pegasus", "Pisces", "Andromeda" },
+                "Greenwich Mean Time" => new() { "Cassiopeia", "Perseus", "Andromeda" },
+                "Central European Time" => new() { "Orion", "Taurus", "Auriga" },
+                "Australian Eastern Time" => new() { "Crux", "Carina", "Centaurus" },
+                _ => new() { "Ursa Major", "Cassiopeia", "Cygnus", "Perseus" }
+            };
+        }
+        else
+        {
+            return new();
+        }
+    }
+
+    private void ToggleComets()
+    {
+        showComets = !showComets;
+        if (showComets && astronomyData == null)
+        {
+            _ = FetchAstronomyDataAsync();
+        }
+        // Optionally, update NextComets from astronomyData if available in future
+    }
+
+    private List<CometInfo> GetNextComets(string? country, string? timezone)
+    {
+        // Example: Map by country/timezone. In a real app, use astronomy APIs or data.
+        if (!string.IsNullOrEmpty(country))
+        {
+            return country switch
+            {
+                "United States" => new() { new CometInfo("Comet Halley", "28/07/2061"), new CometInfo("Comet Encke", "17/10/2026") },
+                "Canada" => new() { new CometInfo("Comet Leonard", "12/12/2025") },
+                "United Kingdom" => new() { new CometInfo("Comet NEOWISE", "15/03/2027") },
+                "Australia" => new() { new CometInfo("Comet McNaught", "14/01/2026") },
+                _ => new() { new CometInfo("Comet Halley", "28/07/2061") }
+            };
+        }
+        else if (!string.IsNullOrEmpty(timezone))
+        {
+            return timezone switch
+            {
+                "Eastern Standard Time" => new() { new CometInfo("Comet Halley", "28/07/2061") },
+                "Central Standard Time" => new() { new CometInfo("Comet Encke", "17/10/2026") },
+                "Mountain Standard Time" => new() { new CometInfo("Comet Leonard", "12/12/2025") },
+                "Pacific Standard Time" => new() { new CometInfo("Comet NEOWISE", "15/03/2027") },
+                "Greenwich Mean Time" => new() { new CometInfo("Comet Halley", "28/07/2061") },
+                "Central European Time" => new() { new CometInfo("Comet Encke", "17/10/2026") },
+                "Australian Eastern Time" => new() { new CometInfo("Comet McNaught", "14/01/2026") },
+                _ => new() { new CometInfo("Comet Halley", "28/07/2061") }
+            };
+        }
+        else
+        {
+            return new();
+        }
+    }
+
+    private async Task FetchAstronomyDataAsync()
+    {
+        if (!IsQueryChanged() && cachedAstronomyData != null)
+        {
+            astronomyData = cachedAstronomyData;
+            isLoadingAstronomyData = false;
+            StateHasChanged();
+            return;
+        }
+        isLoadingAstronomyData = true;
+        astronomyData = null;
+        try
+        {
+            if (string.IsNullOrWhiteSpace(astronomyApiKey))
+            {
+                LunarEclipseError = "Astronomy API key is missing. Please set your API key in the environment variables.";
+                ConstellationError = LunarEclipseError;
+                CometError = LunarEclipseError;
+                isLoadingAstronomyData = false;
+                StateHasChanged();
+                return;
+            }
+
+            string url = string.Empty;
+            string? locationString = null;
+            string lat = userLatitude ?? string.Empty;
+            string lon = userLongitude ?? string.Empty;
+
+            // Prefer lat/lon if available (from geolocation), else build location string
+            if (!string.IsNullOrEmpty(lat) && !string.IsNullOrEmpty(lon))
+            {
+                url = $"https://api.ipgeolocation.io/v2/astronomy?apiKey={astronomyApiKey}&lat={lat}&long={lon}";
+            }
+            else
+            {
+                // Build location string from city, country, timezone
+                if (!string.IsNullOrEmpty(selectedCity) && !string.IsNullOrEmpty(selectedCountry))
+                {
+                    locationString = $"{selectedCity}, {selectedCountry}";
+                }
+                else if (!string.IsNullOrEmpty(selectedCountry))
+                {
+                    locationString = selectedCountry;
+                }
+                else if (!string.IsNullOrEmpty(selectedTimezone))
+                {
+                    locationString = selectedTimezone;
+                }
+                if (!string.IsNullOrEmpty(locationString))
+                {
+                    url = $"https://api.ipgeolocation.io/v2/astronomy?apiKey={astronomyApiKey}&location={Uri.EscapeDataString(locationString)}";
+                }
+                else
+                {
+                    isLoadingAstronomyData = false;
+                    return;
+                }
+            }
+
+            var response = await Http.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("console.log", $"Astronomy API response: {json}");
+                // The v2 API nests astronomy data under 'astronomy' and location under 'location'
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                var astronomyElem = root.TryGetProperty("astronomy", out var astro) ? astro : root;
+                astronomyData = System.Text.Json.JsonSerializer.Deserialize<AstronomyData>(astronomyElem.GetRawText(), new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                cachedAstronomyData = astronomyData;
+                UpdateLastQuery();
+                LunarEclipseError = string.Empty;
+                ConstellationError = string.Empty;
+                CometError = string.Empty;
+            }
+            else
+            {
+                LunarEclipseError = "Failed to fetch astronomy data. Please check your API key and try again.";
+                ConstellationError = LunarEclipseError;
+                CometError = LunarEclipseError;
+            }
+        }
+        catch (Exception ex)
+        {
+            LunarEclipseError = $"Error: {ex.Message}";
+            ConstellationError = $"Error: {ex.Message}";
+            CometError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingAstronomyData = false;
+            StateHasChanged();
+        }
+    }
+
+    // If you have a NASA API call, implement similar caching logic for it here.
+    // Example:
+    // private async Task FetchNasaDataAsync() { ... use cachedNasaData ... }
+
+    private async Task OnShareLocationChanged()
+    {
+        if (shareLocation && JS != null)
+        {
+            var pos = await JS.InvokeAsync<GeolocationResult>("getUserLocation");
+            if (pos != null)
+            {
+                userLatitude = pos.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                userLongitude = pos.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                await FetchAstronomyDataAsync();
+            }
+        }
+    }
+
+    private bool IsNasaQueryChanged()
+    {
+        // Example: cache by lat/lon, country, city, timezone, or whatever NASA API uses
+        var currentParams = new { selectedCountry, selectedCity, selectedTimezone, userLatitude, userLongitude };
+        if (lastNasaQueryParams == null) return true;
+        return !System.Text.Json.JsonSerializer.Serialize(currentParams).Equals(System.Text.Json.JsonSerializer.Serialize(lastNasaQueryParams));
+    }
+
+    private void UpdateLastNasaQuery()
+    {
+        lastNasaQueryParams = new { selectedCountry, selectedCity, selectedTimezone, userLatitude, userLongitude };
+    }
+
+    private async Task FetchNasaDataAsync()
+    {
+        if (!IsNasaQueryChanged() && cachedNasaData != null)
+        {
+            nasaData = cachedNasaData;
+            NasaError = string.Empty;
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(nasaApiKey))
+        {
+            NasaError = "NASA API key is missing.";
+            return;
+        }
+        // For APOD, lat/lon are not required, so we just call the endpoint for the current date
+        var url = $"https://api.nasa.gov/planetary/apod?api_key={nasaApiKey}";
+        await JS.InvokeVoidAsync("console.log", $"NASA API Key: {nasaApiKey}");
+        await JS.InvokeVoidAsync("console.log", $"NASA APOD Request URL: {url}");
+        try
+        {
+            var response = await Http.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("console.log", $"NASA APOD API response: {json}");
+                nasaData = System.Text.Json.JsonSerializer.Deserialize<NasaApodData>(json, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                cachedNasaData = nasaData;
+                UpdateLastNasaQuery();
+                NasaError = string.Empty;
+            }
+            else
+            {
+                NasaError = $"Failed to fetch NASA APOD data. Status: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            NasaError = $"Error: {ex.Message}";
+        }
+    }
+}

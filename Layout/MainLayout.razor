@@ -1,0 +1,29 @@
+﻿@using AboveMe.Layout
+@inherits LayoutComponentBase
+<div class="starry-bg" id="starry-bg"></div>
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        </div>
+
+        <article class="content px-4">
+            <div class="aboveme-title">Above Me</div>
+            @Body
+        </article>
+    </main>
+</div>
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && JS != null)
+        {
+            await JS.InvokeVoidAsync("renderStars");
+        }
+    }
+    [Inject] IJSRuntime? JS { get; set; }
+}
