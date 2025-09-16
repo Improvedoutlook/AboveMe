@@ -46,16 +46,18 @@
     </div>
 
 
-    <div class="form-group form-check">
-        <input type="checkbox" class="form-check-input" id="shareLocation" @bind="shareLocation" />
-        <label class="form-check-label" for="shareLocation">Share my location</label>
+    <div class="form-group text-center">
+        <button type="button" class="btn btn-sm btn-outline-primary mb-1" @onclick="OnShareLocationClicked" title="Share my location">
+            <span class="oi oi-location"></span> 📍
+        </button>
+        <div style="font-size:0.95em; color:#fff;">Share my location</div>
     </div>
     <div class="form-group mt-3">
-        <button class="btn btn-primary" @onclick="ToggleMoonPhases">@((showMoonPhases ? "Hide" : "Show") + " Moon Phases")</button>
+        <button class="btn btn-primary" @onclick="ToggleMoonPhases">@((showMoonPhases ? "Hide" : "Show") + " Moon Data")</button>
     </div>
     @if (showMoonPhases)
     {
-        <div class="moon-phase-display mt-4 text-center">
+    <div class="moon-phase-display mt-4 text-center" style="color: #fff;">
             @if (isLoadingAstronomyData)
             {
                 <div class="text-info">Loading moon phase...</div>
@@ -66,21 +68,48 @@
             }
             else
             {
-                <img src="@($"moonphases/{astronomyData.MoonPhase?.Replace(" ", string.Empty).ToLower()}.png")" alt="Moon phase" class="moon-img" style="max-width:120px;" />
+                <img src="moonphases/beautiful-glowing-gray-full-moon.jpg" alt="Full Moon" class="moon-img" style="max-width:120px;" />
                 <div class="moon-phase-label mt-2">@astronomyData.MoonPhase</div>
                 <div class="moon-phase-details mt-2">
-                    <span>Moonrise: <b>@astronomyData.Moonrise</b></span><br />
-                    <span>Moonset: <b>@astronomyData.Moonset</b></span><br />
-                    <span>Moon Illumination: <b>@astronomyData.MoonIlluminationPercentage</b></span><br />
-                    <span>Sunrise: <b>@astronomyData.Sunrise</b></span><br />
-                    <span>Sunset: <b>@astronomyData.Sunset</b></span><br />
-                    <span>Solar Noon: <b>@astronomyData.SolarNoon</b></span><br />
-                    <span>Day Length: <b>@astronomyData.DayLength</b></span><br />
-                    <span>Current Time: <b>@astronomyData.CurrentTime</b></span>
-                </div>
+                    <span style="color:#fff;">Moonrise: <b>@FormatTime(astronomyData.Moonrise)</b></span><br />
+                    <span style="color:#fff;">Moonset: <b>@FormatTime(astronomyData.Moonset)</b></span><br />
+                    <span style="color:#fff;">Moon Illumination: <b>@astronomyData.MoonIlluminationPercentage</b></span><br />
+                    <span style="color:#fff;">Sunrise: <b>@FormatTime(astronomyData.Sunrise)</b></span><br />
+                    <span style="color:#fff;">Sunset: <b>@FormatTime(astronomyData.Sunset)</b></span><br />
+                    <span style="color:#fff;">Solar Noon: <b>@FormatTime(astronomyData.SolarNoon)</b></span><br />
+                    <span style="color:#fff;">Day Length: <b>@astronomyData.DayLength</b></span><br />
+                    <span style="color:#fff;">Current Time: <b>@FormatTime(astronomyData.CurrentTime, true)</b></span>
+                    </div>
+    // Helper to determine if the selected country/timezone is US or US timezone
+    bool IsUSLocale()
+    {
+        if (string.IsNullOrEmpty(selectedCountry) && string.IsNullOrEmpty(selectedTimezone)) return false;
+        if (!string.IsNullOrEmpty(selectedCountry) && selectedCountry.ToLower().Contains("united states")) return true;
+        if (!string.IsNullOrEmpty(selectedTimezone))
+        {
+            var usTz = new[] { "Eastern Standard Time", "Central Standard Time", "Mountain Standard Time", "Pacific Standard Time" };
+            return usTz.Any(tz => selectedTimezone.Contains(tz));
+        }
+        return false;
+    }
+
+    // Format time as 12-hour with AM/PM for US, otherwise return as-is
+    string FormatTime(string? time, bool showSeconds = false)
+    {
+        if (string.IsNullOrWhiteSpace(time)) return string.Empty;
+        if (!IsUSLocale()) return time;
+        // Try to parse as HH:mm or HH:mm:ss(.fff)
+        DateTime dt;
+        if (DateTime.TryParseExact(time, new[] { "H:mm", "HH:mm", "H:mm:ss", "HH:mm:ss", "H:mm:ss.fff", "HH:mm:ss.fff" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out dt))
+        {
+            return showSeconds ? dt.ToString("h:mm:ss tt") : dt.ToString("h:mm tt");
+        }
+        return time;
+    }
             }
         </div>
     }
+    @* //Get Lunar Eclipse Data to render *@
     <div class="form-group mt-3">
         <button class="btn btn-primary" @onclick="ToggleLunarEclipse">@((showLunarEclipse ? "Hide" : "Show") + " Next Lunar Eclipse")</button>
     </div>
@@ -167,6 +196,32 @@
 </div>
 
 @code {
+    // Helper to determine if the selected country/timezone is US or US timezone
+    private bool IsUSLocale()
+    {
+        if (string.IsNullOrEmpty(selectedCountry) && string.IsNullOrEmpty(selectedTimezone)) return false;
+        if (!string.IsNullOrEmpty(selectedCountry) && selectedCountry.ToLower().Contains("united states")) return true;
+        if (!string.IsNullOrEmpty(selectedTimezone))
+        {
+            var usTz = new[] { "Eastern Standard Time", "Central Standard Time", "Mountain Standard Time", "Pacific Standard Time" };
+            return usTz.Any(tz => selectedTimezone.Contains(tz));
+        }
+        return false;
+    }
+
+    // Format time as 12-hour with AM/PM for US, otherwise return as-is
+    private string FormatTime(string? time, bool showSeconds = false)
+    {
+        if (string.IsNullOrWhiteSpace(time)) return string.Empty;
+        if (!IsUSLocale()) return time;
+        // Try to parse as HH:mm or HH:mm:ss(.fff)
+        DateTime dt;
+        if (DateTime.TryParseExact(time, new[] { "H:mm", "HH:mm", "H:mm:ss", "HH:mm:ss", "H:mm:ss.fff", "HH:mm:ss.fff" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out dt))
+        {
+            return showSeconds ? dt.ToString("h:mm:ss tt") : dt.ToString("h:mm tt");
+        }
+        return time;
+    }
     private List<string> Countries = new() { "United States", "Canada", "United Kingdom", "Australia" };
     private List<string> Cities = new();
     private List<(string Id, string Display, string Description)> Timezones = new()
@@ -303,7 +358,7 @@
         nasaApiKey = Environment.GetEnvironmentVariable("NASA_API_KEY") ?? "DCOJ8SYkVW49IyCH8mhZJuGamWTIYfW2Hhd6afgX";
     }
 
-    private bool IsQueryChanged()
+    bool IsQueryChanged()
     {
         return selectedCountry != lastCountry ||
                selectedCity != lastCity ||
@@ -312,7 +367,7 @@
                userLongitude != lastLongitude;
     }
 
-    private void UpdateLastQuery()
+    void UpdateLastQuery()
     {
         lastCountry = selectedCountry;
         lastCity = selectedCity;
@@ -361,7 +416,7 @@
         }
     }
 
-    private void ToggleMoonPhases()
+    void ToggleMoonPhases()
     {
         showMoonPhases = !showMoonPhases;
         if (showMoonPhases && astronomyData == null)
@@ -372,7 +427,7 @@
     }
 
     // Maps API moon phase values to image filenames in wwwroot/moonphases
-    private string GetMoonPhaseImage(string? moonPhase)
+    string GetMoonPhaseImage(string? moonPhase)
     {
         if (string.IsNullOrWhiteSpace(moonPhase)) return "moonphases/newmoon.png";
         // Map API values to image filenames
@@ -390,7 +445,7 @@
         };
     }
 
-    private (string, string) GetCurrentMoonPhase()
+    (string, string) GetCurrentMoonPhase()
     {
         // Simple moon phase calculation based on current date
         var phases = new[]
@@ -413,7 +468,7 @@
         return phases[phaseIndex];
     }
 
-    private void ToggleLunarEclipse()
+    void ToggleLunarEclipse()
     {
         showLunarEclipse = !showLunarEclipse;
         if (showLunarEclipse && astronomyData == null)
@@ -430,12 +485,12 @@
             else
             {
                 LunarEclipseError = string.Empty;
-                // Optionally, update NextLunarEclipseDate from astronomyData if available in future
+                NextLunarEclipseDate = GetNextLunarEclipse(selectedCountry, selectedTimezone);
             }
         }
     }
 
-    private string GetNextLunarEclipse(string? country, string? timezone)
+    string GetNextLunarEclipse(string? country, string? timezone)
     {
         // Example: Map by country/timezone. In a real app, use astronomy APIs or data.
         DateTime dt;
@@ -471,7 +526,7 @@
         return dt.ToString("dd/MM/yyyy");
     }
 
-    private void ToggleConstellations()
+    void ToggleConstellations()
     {
         showConstellations = !showConstellations;
         if (showConstellations && astronomyData == null)
@@ -481,7 +536,7 @@
         // Optionally, update VisibleConstellations from astronomyData if available in future
     }
 
-    private List<string> GetVisibleConstellations(string? country, string? timezone)
+    List<string> GetVisibleConstellations(string? country, string? timezone)
     {
         // Example: Map by country/timezone. In a real app, use astronomy APIs or data.
         if (!string.IsNullOrEmpty(country))
@@ -515,7 +570,7 @@
         }
     }
 
-    private void ToggleComets()
+    void ToggleComets()
     {
         showComets = !showComets;
         if (showComets && astronomyData == null)
@@ -525,7 +580,7 @@
         // Optionally, update NextComets from astronomyData if available in future
     }
 
-    private List<CometInfo> GetNextComets(string? country, string? timezone)
+    List<CometInfo> GetNextComets(string? country, string? timezone)
     {
         // Example: Map by country/timezone. In a real app, use astronomy APIs or data.
         if (!string.IsNullOrEmpty(country))
@@ -559,7 +614,7 @@
         }
     }
 
-    private async Task FetchAstronomyDataAsync()
+    async Task FetchAstronomyDataAsync()
     {
         if (!IsQueryChanged() && cachedAstronomyData != null)
         {
@@ -658,21 +713,26 @@
     // Example:
     // private async Task FetchNasaDataAsync() { ... use cachedNasaData ... }
 
-    private async Task OnShareLocationChanged()
+    async Task OnShareLocationClicked()
     {
-        if (shareLocation && JS != null)
+        if (JS != null)
         {
             var pos = await JS.InvokeAsync<GeolocationResult>("getUserLocation");
             if (pos != null)
             {
                 userLatitude = pos.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 userLongitude = pos.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                // Set country and timezone if available from geolocation
+                if (!string.IsNullOrWhiteSpace(pos.Country))
+                    selectedCountry = pos.Country;
+                if (!string.IsNullOrWhiteSpace(pos.Timezone))
+                    selectedTimezone = pos.Timezone;
                 await FetchAstronomyDataAsync();
             }
         }
     }
 
-    private bool IsNasaQueryChanged()
+    bool IsNasaQueryChanged()
     {
         // Example: cache by lat/lon, country, city, timezone, or whatever NASA API uses
         var currentParams = new { selectedCountry, selectedCity, selectedTimezone, userLatitude, userLongitude };
@@ -680,12 +740,12 @@
         return !System.Text.Json.JsonSerializer.Serialize(currentParams).Equals(System.Text.Json.JsonSerializer.Serialize(lastNasaQueryParams));
     }
 
-    private void UpdateLastNasaQuery()
+    void UpdateLastNasaQuery()
     {
         lastNasaQueryParams = new { selectedCountry, selectedCity, selectedTimezone, userLatitude, userLongitude };
     }
 
-    private async Task FetchNasaDataAsync()
+    async Task FetchNasaDataAsync()
     {
         if (!IsNasaQueryChanged() && cachedNasaData != null)
         {
