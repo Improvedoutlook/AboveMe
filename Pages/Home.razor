@@ -135,32 +135,31 @@
         </div>
     }
     <div class="form-group mt-3">
-        <button class="btn btn-primary" @onclick="ToggleConstellations">@((showConstellations ? "Hide" : "Show") + " Visible Constellations")</button>
+        <button class="btn btn-primary" @onclick="ToggleConstellations">@((showConstellations ? "Hide" : "Show") + " Constellation Data")</button>
     </div>
     @if (showConstellations)
     {
         <div class="constellations-display mt-4 text-center">
-            @if (isLoadingAstronomyData)
+            @if (isLoadingNasaData)
             {
-                <div class="text-info">Loading constellations...</div>
+                <div class="text-info">Loading NASA data...</div>
             }
-            else if (!string.IsNullOrEmpty(ConstellationError))
+            else if (!string.IsNullOrEmpty(NasaError))
             {
-                <div class="text-warning" style="color: #ffc107;">@ConstellationError</div>
+                <div class="text-warning" style="color: #ffc107;">@NasaError</div>
             }
-            else if (astronomyData == null)
+            else if (nasaData == null)
             {
-                <div class="text-warning">Unable to load constellation data. Please check your location and try again.</div>
+                <div class="text-warning">Unable to load NASA data. Please check your API key and try again.</div>
             }
             else
             {
-                <img src="starry.png" alt="Starry sky" style="max-width:100px; margin-bottom:1rem;" />
-                <ul class="list-unstyled" style="color:#fff;">
-                    @foreach (var constellation in VisibleConstellations)
-                    {
-                        <li>@constellation</li>
-                    }
-                </ul>
+                if (!string.IsNullOrWhiteSpace(nasaData.Url) && nasaData.MediaType == "image")
+                {
+                    <img src="@nasaData.Url" alt="NASA Astronomy Picture of the Day" style="max-width:100%; border-radius:8px; margin-bottom:1em;" />
+                }
+                <div style="color:#fff; font-weight:bold; font-size:1.1em;">@nasaData.Title</div>
+                <div style="color:#fff; margin-top:0.5em;">@nasaData.Explanation</div>
             }
         </div>
     }
@@ -526,14 +525,18 @@
         return dt.ToString("dd/MM/yyyy");
     }
 
-    void ToggleConstellations()
+    bool isLoadingNasaData = false;
+    async void ToggleConstellations()
     {
         showConstellations = !showConstellations;
-        if (showConstellations && astronomyData == null)
+        if (showConstellations && nasaData == null)
         {
-            _ = FetchAstronomyDataAsync();
+            isLoadingNasaData = true;
+            StateHasChanged();
+            await FetchNasaDataAsync();
+            isLoadingNasaData = false;
+            StateHasChanged();
         }
-        // Optionally, update VisibleConstellations from astronomyData if available in future
     }
 
     List<string> GetVisibleConstellations(string? country, string? timezone)
