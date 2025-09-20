@@ -11,7 +11,7 @@
         <label for="country">Country</label>
         <select id="country" class="form-control" @bind="selectedCountry">
             <option value="">Select Country</option>
-            @foreach (var country in Countries)
+            @foreach (string country in Countries)
             {
                 <option value="@country">@country</option>
             }
@@ -21,7 +21,7 @@
         <label for="timezone">Timezone</label>
         <select id="timezone" class="form-control" @bind="selectedTimezone">
             <option value="">Select Timezone</option>
-            @foreach (var tz in Timezones)
+            @foreach ((string Id, string Display, string Description) tz in Timezones)
             {
                 <option value="@tz.Id">@tz.Display @("(" + tz.Description + ")")</option>
             }
@@ -33,7 +33,7 @@
         {
             <select id="city" class="form-control" @bind="selectedCity">
                 <option value="">Select City</option>
-                @foreach (var city in Cities)
+                @foreach (string city in Cities)
                 {
                     <option value="@city">@city</option>
                 }
@@ -78,16 +78,16 @@
                     <span style="color:#fff;">Sunset: <b>@FormatTime(astronomyData.Sunset)</b></span><br />
                     <span style="color:#fff;">Solar Noon: <b>@FormatTime(astronomyData.SolarNoon)</b></span><br />
                     <span style="color:#fff;">Day Length: <b>@astronomyData.DayLength</b></span><br />
-                    <span style="color:#fff;">Current Time: <b>@FormatTime(astronomyData.CurrentTime, true)</b></span>
+                    <span style="color:#fff;">Current Time: <b>@FormatTime(astronomyData.CurrentTime, showSeconds: true)</b></span>
                     </div>
     // Helper to determine if the selected country/timezone is US or US timezone
     bool IsUSLocale()
     {
         if (string.IsNullOrEmpty(selectedCountry) && string.IsNullOrEmpty(selectedTimezone)) return false;
-        if (!string.IsNullOrEmpty(selectedCountry) && selectedCountry.ToLower().Contains("united states")) return true;
+        if (!string.IsNullOrEmpty(selectedCountry) && selectedCountry.ToLower().Contains(value: "united states")) return true;
         if (!string.IsNullOrEmpty(selectedTimezone))
         {
-            var usTz = new[] { "Eastern Standard Time", "Central Standard Time", "Mountain Standard Time", "Pacific Standard Time" };
+            string[]? usTz = new[] { "Eastern Standard Time", "Central Standard Time", "Mountain Standard Time", "Pacific Standard Time" };
             return usTz.Any(tz => selectedTimezone.Contains(tz));
         }
         return false;
@@ -102,7 +102,7 @@
         DateTime dt;
         if (DateTime.TryParseExact(time, new[] { "H:mm", "HH:mm", "H:mm:ss", "HH:mm:ss", "H:mm:ss.fff", "HH:mm:ss.fff" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out dt))
         {
-            return showSeconds ? dt.ToString("h:mm:ss tt") : dt.ToString("h:mm tt");
+            return showSeconds ? dt.ToString(format: "h:mm:ss tt") : dt.ToString(format: "h:mm tt");
         }
         return time;
     }
@@ -130,7 +130,7 @@
             }
             else
             {
-                <div class="lunar-eclipse-label mt-2" style="color:#fff;">Next visible lunar eclipse: <b>@NextLunarEclipseDate</b></div>
+                <div class="lunar-eclipse-label mt-2" style="color:#fff;"><b>@NextLunarEclipseDate</b></div>
             }
         </div>
     }
@@ -184,9 +184,13 @@
             else
             {
                 <ul class="list-unstyled" style="color:#fff;">
-                    @foreach (var comet in NextComets)
+                    @foreach (CometInfo comet in NextComets)
                     {
-                        <li><b>@comet.Name</b> — Next visible: @comet.NextDate</li>
+                        DateTime dt;
+                        string formattedDate = DateTime.TryParse(comet.NextDate, out dt)
+                            ? dt.ToString(format: "dd/MM/yyyy")
+                            : comet.NextDate;
+                        <li><b>@comet.Name</b> — Next visible: @formattedDate</li>
                     }
                 </ul>
             }
@@ -199,10 +203,10 @@
     private bool IsUSLocale()
     {
         if (string.IsNullOrEmpty(selectedCountry) && string.IsNullOrEmpty(selectedTimezone)) return false;
-        if (!string.IsNullOrEmpty(selectedCountry) && selectedCountry.ToLower().Contains("united states")) return true;
+        if (!string.IsNullOrEmpty(selectedCountry) && selectedCountry.ToLower().Contains(value: "united states")) return true;
         if (!string.IsNullOrEmpty(selectedTimezone))
         {
-            var usTz = new[] { "Eastern Standard Time", "Central Standard Time", "Mountain Standard Time", "Pacific Standard Time" };
+            string[]? usTz = new[] { "Eastern Standard Time", "Central Standard Time", "Mountain Standard Time", "Pacific Standard Time" };
             return usTz.Any(tz => selectedTimezone.Contains(tz));
         }
         return false;
@@ -217,21 +221,22 @@
         DateTime dt;
         if (DateTime.TryParseExact(time, new[] { "H:mm", "HH:mm", "H:mm:ss", "HH:mm:ss", "H:mm:ss.fff", "HH:mm:ss.fff" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out dt))
         {
-            return showSeconds ? dt.ToString("h:mm:ss tt") : dt.ToString("h:mm tt");
+            return showSeconds ? dt.ToString(format: "h:mm:ss tt") : dt.ToString(format: "h:mm tt");
         }
         return time;
     }
-    private List<string> Countries = new() { "United States", "Canada", "United Kingdom", "Australia" };
-    private List<string> Cities = new();
-    private List<(string Id, string Display, string Description)> Timezones = new()
+    private List<string> Countries = new List<string>() { "United States", "Canada", "United Kingdom", "Australia", "China" };
+    private List<string> Cities = new List<string>();
+    private List<(string Id, string Display, string Description)> Timezones = new List<(string Id, string Display, string Description)>()
     {
         ("Eastern Standard Time", "Eastern", "UTC-5"),
         ("Central Standard Time", "Central", "UTC-6"),
         ("Mountain Standard Time", "Mountain", "UTC-7"),
         ("Pacific Standard Time", "Pacific", "UTC-8"),
-        ("Greenwich Mean Time", "GMT", "UTC+0"),
-        ("Central European Time", "CET", "UTC+1"),
-        ("Australian Eastern Time", "AET", "UTC+10")
+        ("Greenwich Mean Time", "Greenwich Mean Time", "UTC+0"),
+        ("Central European Time", "Central European Time", "UTC+1"),
+        ("Australian Eastern Time", "Australian Eastern Time", "UTC+10"),
+        ("China Standard Time", "China Standard Time", "UTC+8")
     };
     private string? selectedCountry;
     private string? selectedCity;
@@ -241,8 +246,8 @@
     private bool showLunarEclipse;
     private bool showConstellations;
     private bool showComets;
-    private List<string> VisibleConstellations = new();
-    private List<CometInfo> NextComets = new();
+    private List<string> VisibleConstellations = new List<string>();
+    private List<CometInfo> NextComets = new List<CometInfo>();
     private string ConstellationError = string.Empty;
     private string CometError = string.Empty;
     private string NextLunarEclipseDate = string.Empty;
@@ -280,27 +285,27 @@
 
     public class AstronomyData
     {
-        [JsonPropertyName("moon_phase")]
+        [JsonPropertyName(name: "moon_phase")]
         public string? MoonPhase { get; set; }
-        [JsonPropertyName("moonrise")]
+        [JsonPropertyName(name: "moonrise")]
         public string? Moonrise { get; set; }
-        [JsonPropertyName("moonset")]
+        [JsonPropertyName(name: "moonset")]
         public string? Moonset { get; set; }
-        [JsonPropertyName("sunrise")]
+        [JsonPropertyName(name: "sunrise")]
         public string? Sunrise { get; set; }
-        [JsonPropertyName("sunset")]
+        [JsonPropertyName(name: "sunset")]
         public string? Sunset { get; set; }
-        [JsonPropertyName("current_time")]
+        [JsonPropertyName(name: "current_time")]
         public string? CurrentTime { get; set; }
-        [JsonPropertyName("solar_noon")]
+        [JsonPropertyName(name: "solar_noon")]
         public string? SolarNoon { get; set; }
-        [JsonPropertyName("day_length")]
+        [JsonPropertyName(name: "day_length")]
         public string? DayLength { get; set; }
-        [JsonPropertyName("country_code")]
+        [JsonPropertyName(name: "country_code")]
         public string? CountryCode { get; set; }
-        [JsonPropertyName("location")]
+        [JsonPropertyName(name: "location")]
         public object? Location { get; set; }
-        [JsonPropertyName("moon_illumination_percentage")]
+        [JsonPropertyName(name: "moon_illumination_percentage")]
         public string? MoonIlluminationPercentage { get; set; }
         // Add more fields as needed
     }
@@ -318,21 +323,21 @@
 
     public class NasaApodData
     {
-        [JsonPropertyName("copyright")]
+        [JsonPropertyName(name: "copyright")]
         public string? Copyright { get; set; }
-        [JsonPropertyName("date")]
+        [JsonPropertyName(name: "date")]
         public string? Date { get; set; }
-        [JsonPropertyName("explanation")]
+        [JsonPropertyName(name: "explanation")]
         public string? Explanation { get; set; }
-        [JsonPropertyName("hdurl")]
+        [JsonPropertyName(name: "hdurl")]
         public string? HdUrl { get; set; }
-        [JsonPropertyName("media_type")]
+        [JsonPropertyName(name: "media_type")]
         public string? MediaType { get; set; }
-        [JsonPropertyName("service_version")]
+        [JsonPropertyName(name: "service_version")]
         public string? ServiceVersion { get; set; }
-        [JsonPropertyName("title")]
+        [JsonPropertyName(name: "title")]
         public string? Title { get; set; }
-        [JsonPropertyName("url")]
+        [JsonPropertyName(name: "url")]
         public string? Url { get; set; }
     }
 
@@ -381,22 +386,22 @@
         {
             Cities = selectedCountry switch
             {
-                "United States" => new() { "New York", "Los Angeles", "Chicago" },
-                "Canada" => new() { "Toronto", "Vancouver", "Montreal" },
-                "United Kingdom" => new() { "London", "Manchester", "Birmingham" },
-                "Australia" => new() { "Sydney", "Melbourne", "Brisbane" },
-                _ => new()
+                "United States" => new List<string>() { "New York", "Los Angeles", "Chicago" },
+                "Canada" => new List<string>() { "Toronto", "Vancouver", "Montreal" },
+                "United Kingdom" => new List<string>() { "London", "Manchester", "Birmingham" },
+                "Australia" => new List<string>() { "Sydney", "Melbourne", "Brisbane" },
+                _ => new List<string>()
             };
             await FetchAstronomyDataAsync();
         }
         else if (!string.IsNullOrEmpty(selectedTimezone))
         {
-            Cities = new();
+            Cities = new List<string>();
             await FetchAstronomyDataAsync();
         }
         else
         {
-            Cities = new();
+            Cities = new List<string>();
         }
     }
 
@@ -447,7 +452,7 @@
     (string, string) GetCurrentMoonPhase()
     {
         // Simple moon phase calculation based on current date
-        var phases = new[]
+        (string, string)[]? phases = new[]
         {
             ("New Moon", "moonphases/newmoon.png"),
             ("Waxing Crescent", "moonphases/waxingcrescent.png"),
@@ -458,12 +463,12 @@
             ("Last Quarter", "moonphases/lastquarter.png"),
             ("Waning Crescent", "moonphases/waningcrescent.png")
         };
-        var now = DateTime.UtcNow;
-        var synodicMonth = 29.53058867;
-        var knownNewMoon = new DateTime(2000, 1, 6, 18, 14, 0, DateTimeKind.Utc); // Reference new moon
-        var daysSince = (now - knownNewMoon).TotalDays;
-        var currentPhase = daysSince % synodicMonth;
-        var phaseIndex = (int)Math.Floor((currentPhase / synodicMonth) * phases.Length) % phases.Length;
+        DateTime now = DateTime.UtcNow;
+        double synodicMonth = 29.53058867;
+        DateTime knownNewMoon = new DateTime(year: 2000, month: 1, day: 6, hour: 18, minute: 14, second: 0, DateTimeKind.Utc); // Reference new moon
+        double daysSince = (now - knownNewMoon).TotalDays;
+        double currentPhase = daysSince % synodicMonth;
+        int phaseIndex = (int)Math.Floor((currentPhase / synodicMonth) * phases.Length) % phases.Length;
         return phases[phaseIndex];
     }
 
@@ -491,38 +496,51 @@
 
     string GetNextLunarEclipse(string? country, string? timezone)
     {
-        // Example: Map by country/timezone. In a real app, use astronomy APIs or data.
-        DateTime dt;
-        if (!string.IsNullOrEmpty(country))
+        // Example: List of known eclipses (future and past)
+        DateTime[]? eclipses = new[]
         {
-            dt = country switch
-            {
-                "United States" => new DateTime(2025, 9, 7),
-                "Canada" => new DateTime(2025, 9, 7),
-                "United Kingdom" => new DateTime(2025, 9, 7),
-                "Australia" => new DateTime(2025, 3, 14),
-                _ => new DateTime(2025, 9, 7)
-            };
-        }
-        else if (!string.IsNullOrEmpty(timezone))
+            new DateTime(year: 2023, month: 5, day: 5),
+            new DateTime(year: 2023, month: 10, day: 28),
+            new DateTime(year: 2024, month: 3, day: 25),
+            new DateTime(year: 2024, month: 9, day: 18),
+            new DateTime(year: 2025, month: 3, day: 14),
+            new DateTime(year: 2025, month: 9, day: 7),
+            new DateTime(year: 2026, month: 3, day: 3),
+            new DateTime(year: 2026, month: 8, day: 28),
+            new DateTime(year: 2027, month: 2, day: 20),
+            new DateTime(year: 2027, month: 8, day: 17),
+            new DateTime(year: 2028, month: 1, day: 12),
+            new DateTime(year: 2028, month: 7, day: 6),
+            new DateTime(year: 2028, month: 12, day: 31),
+            new DateTime(year: 2029, month: 6, day: 26),
+            new DateTime(year: 2029, month: 12, day: 20),
+            new DateTime(year: 2030, month: 6, day: 15),
+            new DateTime(year: 2030, month: 12, day: 9),
+            new DateTime(year: 2031, month: 6, day: 4),
+            new DateTime(year: 2031, month: 11, day: 29),
+            new DateTime(year: 2032, month: 5, day: 24),
+            new DateTime(year: 2032, month: 11, day: 18),
+            new DateTime(year: 2033, month: 5, day: 14),
+            new DateTime(year: 2033, month: 11, day: 8),
+            new DateTime(year: 2034, month: 5, day: 4),
+            new DateTime(year: 2034, month: 10, day: 29),
+            new DateTime(year: 2035, month: 4, day: 24),
+            new DateTime(year: 2035, month: 10, day: 18)
+        };
+        // Optionally, filter by country/timezone for hemisphere, but here we use all
+        DateTime now = DateTime.UtcNow;
+        DateTime next = eclipses.FirstOrDefault(d => d > now);
+        if (next != default)
         {
-            dt = timezone switch
-            {
-                "Eastern Standard Time" => new DateTime(2025, 9, 7),
-                "Central Standard Time" => new DateTime(2025, 9, 7),
-                "Mountain Standard Time" => new DateTime(2025, 9, 7),
-                "Pacific Standard Time" => new DateTime(2025, 9, 7),
-                "Greenwich Mean Time" => new DateTime(2025, 9, 7),
-                "Central European Time" => new DateTime(2025, 9, 7),
-                "Australian Eastern Time" => new DateTime(2025, 3, 14),
-                _ => new DateTime(2025, 9, 7)
-            };
+            return $"Next visible lunar eclipse: {next:dd/MM/yyyy}";
         }
-        else
+        // If no future eclipse, show last past one
+        DateTime last = eclipses.LastOrDefault(d => d <= now);
+        if (last != default)
         {
-            return string.Empty;
+            return $"Last visible lunar eclipse: {last:dd/MM/yyyy}";
         }
-        return dt.ToString("dd/MM/yyyy");
+        return "No lunar eclipse data available.";
     }
 
     bool isLoadingNasaData = false;
@@ -546,74 +564,136 @@
         {
             return country switch
             {
-                "United States" => new() { "Orion", "Ursa Major", "Cassiopeia", "Cygnus" },
-                "Canada" => new() { "Draco", "Cepheus", "Ursa Minor", "Perseus" },
-                "United Kingdom" => new() { "Pegasus", "Andromeda", "Perseus", "Cassiopeia" },
-                "Australia" => new() { "Crux", "Centaurus", "Carina", "Pavo" },
-                _ => new() { "Ursa Major", "Cassiopeia", "Cygnus", "Perseus" }
+                "United States" => new List<string>() { "Orion", "Ursa Major", "Cassiopeia", "Cygnus" },
+                "Canada" => new List<string>() { "Draco", "Cepheus", "Ursa Minor", "Perseus" },
+                "United Kingdom" => new List<string>() { "Pegasus", "Andromeda", "Perseus", "Cassiopeia" },
+                "Australia" => new List<string>() { "Crux", "Centaurus", "Carina", "Pavo" },
+                _ => new List<string>() { "Ursa Major", "Cassiopeia", "Cygnus", "Perseus" }
             };
         }
         else if (!string.IsNullOrEmpty(timezone))
         {
             return timezone switch
             {
-                "Eastern Standard Time" => new() { "Orion", "Gemini", "Canis Major" },
-                "Central Standard Time" => new() { "Leo", "Virgo", "Cancer" },
-                "Mountain Standard Time" => new() { "Aquila", "Lyra", "Sagittarius" },
-                "Pacific Standard Time" => new() { "Pegasus", "Pisces", "Andromeda" },
-                "Greenwich Mean Time" => new() { "Cassiopeia", "Perseus", "Andromeda" },
-                "Central European Time" => new() { "Orion", "Taurus", "Auriga" },
-                "Australian Eastern Time" => new() { "Crux", "Carina", "Centaurus" },
-                _ => new() { "Ursa Major", "Cassiopeia", "Cygnus", "Perseus" }
+                "Eastern Standard Time" => new List<string>() { "Orion", "Gemini", "Canis Major" },
+                "Central Standard Time" => new List<string>() { "Leo", "Virgo", "Cancer" },
+                "Mountain Standard Time" => new List<string>() { "Aquila", "Lyra", "Sagittarius" },
+                "Pacific Standard Time" => new List<string>() { "Pegasus", "Pisces", "Andromeda" },
+                "Greenwich Mean Time" => new List<string>() { "Cassiopeia", "Perseus", "Andromeda" },
+                "Central European Time" => new List<string>() { "Orion", "Taurus", "Auriga" },
+                "Australian Eastern Time" => new List<string>() { "Crux", "Carina", "Centaurus" },
+                _ => new List<string>() { "Ursa Major", "Cassiopeia", "Cygnus", "Perseus" }
             };
         }
         else
         {
-            return new();
+            return new List<string>();
         }
     }
 
     void ToggleComets()
     {
         showComets = !showComets;
-        if (showComets && astronomyData == null)
+        if (showComets)
         {
-            _ = FetchAstronomyDataAsync();
+            // Always update NextComets when showing
+            NextComets = GetNextComets(selectedCountry, selectedTimezone);
+            if (astronomyData == null)
+            {
+                _ = FetchAstronomyDataAsync();
+            }
         }
-        // Optionally, update NextComets from astronomyData if available in future
     }
 
     List<CometInfo> GetNextComets(string? country, string? timezone)
     {
         // Example: Map by country/timezone. In a real app, use astronomy APIs or data.
+        // Expanded reputable comet data for major countries and timezones
         if (!string.IsNullOrEmpty(country))
         {
             return country switch
             {
-                "United States" => new() { new CometInfo("Comet Halley", "28/07/2061"), new CometInfo("Comet Encke", "17/10/2026") },
-                "Canada" => new() { new CometInfo("Comet Leonard", "12/12/2025") },
-                "United Kingdom" => new() { new CometInfo("Comet NEOWISE", "15/03/2027") },
-                "Australia" => new() { new CometInfo("Comet McNaught", "14/01/2026") },
-                _ => new() { new CometInfo("Comet Halley", "28/07/2061") }
+                "United States" => new List<CometInfo>() {
+                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061"),
+                    new CometInfo(name: "Comet Encke", nextDate: "17/10/2026"),
+                    new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
+                },
+                "United Kingdom" => new List<CometInfo>() {
+                    new CometInfo(name: "Comet NEOWISE", nextDate: "15/03/2027"),
+                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061")
+                },
+                "Canada" => new List<CometInfo>() {
+                    new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025"),
+                    new CometInfo(name: "Comet Encke", nextDate: "17/10/2026")
+                },
+                "Australia" => new List<CometInfo>() {
+                    new CometInfo(name: "Comet McNaught", nextDate: "14/01/2026"),
+                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061")
+                },
+                "China" => new List<CometInfo>() {
+                    new CometInfo(name: "Comet Ikeya–Zhang", nextDate: "01/04/2030"),
+                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061")
+                },
+                _ => new List<CometInfo>() {
+                    // Famous comets visible globally as fallback
+                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061"),
+                    new CometInfo(name: "Comet Encke", nextDate: "17/10/2026"),
+                    new CometInfo(name: "Comet NEOWISE", nextDate: "15/03/2027"),
+                    new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
+                }
             };
         }
         else if (!string.IsNullOrEmpty(timezone))
         {
             return timezone switch
             {
-                "Eastern Standard Time" => new() { new CometInfo("Comet Halley", "28/07/2061") },
-                "Central Standard Time" => new() { new CometInfo("Comet Encke", "17/10/2026") },
-                "Mountain Standard Time" => new() { new CometInfo("Comet Leonard", "12/12/2025") },
-                "Pacific Standard Time" => new() { new CometInfo("Comet NEOWISE", "15/03/2027") },
-                "Greenwich Mean Time" => new() { new CometInfo("Comet Halley", "28/07/2061") },
-                "Central European Time" => new() { new CometInfo("Comet Encke", "17/10/2026") },
-                "Australian Eastern Time" => new() { new CometInfo("Comet McNaught", "14/01/2026") },
-                _ => new() { new CometInfo("Comet Halley", "28/07/2061") }
+                "Eastern Standard Time" => new List<CometInfo>() {
+                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061"),
+                    new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
+                },
+                "Central Standard Time" => new List<CometInfo>() {
+                    new CometInfo(name: "Comet Encke", nextDate: "17/10/2026"),
+                    new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
+                },
+                "Mountain Standard Time" => new List<CometInfo>() {
+                    new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
+                },
+                "Pacific Standard Time" => new List<CometInfo>() {
+                    new CometInfo(name: "Comet NEOWISE", nextDate: "15/03/2027")
+                },
+                "Greenwich Mean Time" => new List<CometInfo>() {
+                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061")
+                },
+                "Central European Time" => new List<CometInfo>() {
+                    new CometInfo(name: "Comet Encke", nextDate: "17/10/2026")
+                },
+                "Australian Eastern Time" => new List<CometInfo>() {
+                    new CometInfo(name: "Comet McNaught", nextDate: "14/01/2026")
+                },
+                "China Standard Time" => new List<CometInfo>() {
+                    new CometInfo(name: "Comet Ikeya–Zhang", nextDate: "01/04/2030")
+                },
+                _ => new List<CometInfo>() {
+                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061"),
+                    new CometInfo(name: "Comet Encke", nextDate: "17/10/2026"),
+                    new CometInfo(name: "Comet NEOWISE", nextDate: "15/03/2027"),
+                    new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
+                }
+            };
+        }
+        else if (!string.IsNullOrEmpty(userLatitude) && !string.IsNullOrEmpty(userLongitude))
+        {
+            // If location is shared, use a global list as fallback (real app: use astronomy API)
+            return new List<CometInfo>() {
+                new CometInfo(name: "Comet Halley", nextDate: "28/07/2061"),
+                new CometInfo(name: "Comet Encke", nextDate: "17/10/2026"),
+                new CometInfo(name: "Comet NEOWISE", nextDate: "15/03/2027"),
+                new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
             };
         }
         else
         {
-            return new();
+            return new List<CometInfo>();
         }
     }
 
@@ -676,16 +756,16 @@
                 }
             }
 
-            var response = await Http.GetAsync(url);
+            HttpResponseMessage? response = await Http.GetAsync(url);
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
                 await JS.InvokeVoidAsync("console.log", $"Astronomy API response: {json}");
                 // The v2 API nests astronomy data under 'astronomy' and location under 'location'
-                using var doc = System.Text.Json.JsonDocument.Parse(json);
-                var root = doc.RootElement;
-                var astronomyElem = root.TryGetProperty("astronomy", out var astro) ? astro : root;
-                astronomyData = System.Text.Json.JsonSerializer.Deserialize<AstronomyData>(astronomyElem.GetRawText(), new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                using System.Text.Json.JsonDocument? doc = System.Text.Json.JsonDocument.Parse(json);
+                System.Text.Json.JsonElement root = doc.RootElement;
+                System.Text.Json.JsonElement astronomyElem = root.TryGetProperty(propertyName: "astronomy", out System.Text.Json.JsonElement astro) ? astro : root;
+                astronomyData = System.Text.Json.JsonSerializer.Deserialize<AstronomyData>(astronomyElem.GetRawText(), options: new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 cachedAstronomyData = astronomyData;
                 UpdateLastQuery();
                 LunarEclipseError = string.Empty;
@@ -720,7 +800,7 @@
     {
         if (JS != null)
         {
-            var pos = await JS.InvokeAsync<GeolocationResult>("getUserLocation");
+            GeolocationResult? pos = await JS.InvokeAsync<GeolocationResult>(identifier: "getUserLocation");
             if (pos != null)
             {
                 userLatitude = pos.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -762,17 +842,17 @@
             return;
         }
         // For APOD, lat/lon are not required, so we just call the endpoint for the current date
-        var url = $"https://api.nasa.gov/planetary/apod?api_key={nasaApiKey}";
-        await JS.InvokeVoidAsync("console.log", $"NASA API Key: {nasaApiKey}");
-        await JS.InvokeVoidAsync("console.log", $"NASA APOD Request URL: {url}");
+        string? url = $"https://api.nasa.gov/planetary/apod?api_key={nasaApiKey}";
+        await JS.InvokeVoidAsync(identifier: "console.log", $"NASA API Key: {nasaApiKey}");
+        await JS.InvokeVoidAsync(identifier: "console.log", $"NASA APOD Request URL: {url}");
         try
         {
-            var response = await Http.GetAsync(url);
+            HttpResponseMessage? response = await Http.GetAsync(url);
             if (response.IsSuccessStatusCode)
             {
-                var json = await response.Content.ReadAsStringAsync();
-                await JS.InvokeVoidAsync("console.log", $"NASA APOD API response: {json}");
-                nasaData = System.Text.Json.JsonSerializer.Deserialize<NasaApodData>(json, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                string? json = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync(identifier: "console.log", $"NASA APOD API response: {json}");
+                nasaData = System.Text.Json.JsonSerializer.Deserialize<NasaApodData>(json, options: new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 cachedNasaData = nasaData;
                 UpdateLastNasaQuery();
                 NasaError = string.Empty;

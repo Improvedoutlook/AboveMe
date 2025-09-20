@@ -514,7 +514,6 @@ C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\uirftivjpy-t1twzlwmkh.gz
 C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\yk89k8wpsd-63fj8s7r0e.gz
 C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\qhcaf5b1cx-s70mu5p4fw.gz
 C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\mrjj1aobm5-iag0ou56lh.gz
-C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\eqzyl8vvnz-jei1egdg6n.gz
 C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\gyltfmty8a-md9yvkcqlf.gz
 C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\sy83gwjqfr-3e54oggfzj.gz
 C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\8p7ovkyopj-3e54oggfzj.gz
@@ -1077,10 +1076,11 @@ C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\jjztdhcrav-21mns4qp4i.gz
 C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\87vkl7olhb-st3wwc8rqy.gz
 C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\78vgvdzqzi-zbl9qys38n.gz
 C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\kxe3k7o8b8-trsn1znqy7.gz
-C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.kz8ijrlwy8.wasm
-C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.r55a7ozqz5.pdb
-C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.kz8ijrlwy8.wasm.gz
-C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.r55a7ozqz5.pdb.gz
-C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\njnrpvac16-kz8ijrlwy8.gz
-C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\1i8nlav4m4-r55a7ozqz5.gz
-C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\032o2wsu53-5hs54heg1q.gz
+C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\eqzyl8vvnz-p3s9fosc89.gz
+C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.ftuhjdfwnu.wasm
+C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.36zywonurk.pdb
+C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.ftuhjdfwnu.wasm.gz
+C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.36zywonurk.pdb.gz
+C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\njnrpvac16-ftuhjdfwnu.gz
+C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\1i8nlav4m4-36zywonurk.gz
+C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\032o2wsu53-gesxfby9o8.gz
