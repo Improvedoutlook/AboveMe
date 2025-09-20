@@ -5,7 +5,7 @@ AboveMe is a Blazor WebAssembly app that uses your location to display astronomy
 ## Features
 - Uses ipgeolocation API to determine user location
 - Animated starry background with twinkling stars
-- Astronomy data (moon phases, constellations, comets, aurora borealis)
+- Astronomy data (moon phases, constellations, comets, and NASA's picture of the day)
 
 ## Getting Started
 1. Open the project in Visual Studio Code.
