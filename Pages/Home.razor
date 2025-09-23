@@ -66,9 +66,22 @@
             {
                 <div class="text-warning">Unable to load moon phase data. Please check your location and try again.</div>
             }
-            else
+            else if (astronomyData != null)
             {
-                <img src="moonphases/beautiful-glowing-gray-full-moon.jpg" alt="Full Moon" class="moon-img" style="max-width:120px;" />
+                string? moonPhase = astronomyData.MoonPhase ?? "NEW_MOON";
+                string imageFile = moonPhase.ToUpperInvariant() switch
+                {
+                    "NEW_MOON" => "NEW_MOON.jpg",
+                    "WAXING_CRESCENT" => "WAXING_CRESCENT.jpg",
+                    "FIRST_QUARTER" => "FIRST_QUARTER.jpg",
+                    "WAXING_GIBBOUS" => "WAXING_GIBBOUS.jpg",
+                    "FULL_MOON" => "FULL_MOON.jpg",
+                    "WANING_GIBBOUS" => "WANING_GIBBOUS.jpg",
+                    "LAST_QUARTER" => "LAST_QUARTER.jpg",
+                    "WANING_CRESCENT" => "WANING_CRESCENT.jpg",
+                    _ => "NEW_MOON.jpg"
+                };
+                <img src="moonphases/@imageFile" alt="@moonPhase.Replace("_", " ")" class="moon-img" style="max-width:120px;" />
                 <div class="moon-phase-label mt-2">@astronomyData.MoonPhase</div>
                 <div class="moon-phase-details mt-2">
                     <span style="color:#fff;">Moonrise: <b>@FormatTime(astronomyData.Moonrise)</b></span><br />
@@ -79,7 +92,7 @@
                     <span style="color:#fff;">Solar Noon: <b>@FormatTime(astronomyData.SolarNoon)</b></span><br />
                     <span style="color:#fff;">Day Length: <b>@astronomyData.DayLength</b></span><br />
                     <span style="color:#fff;">Current Time: <b>@FormatTime(astronomyData.CurrentTime, showSeconds: true)</b></span>
-                    </div>
+                </div>
     // Helper to determine if the selected country/timezone is US or US timezone
     bool IsUSLocale()
     {
@@ -188,7 +201,7 @@
                     {
                         DateTime dt;
                         string formattedDate = DateTime.TryParse(comet.NextDate, out dt)
-                            ? dt.ToString(format: "dd/MM/yyyy")
+                            ? dt.ToString(format: "MM/dd/yyyy")
                             : comet.NextDate;
                         <li><b>@comet.Name</b> — Next visible: @formattedDate</li>
                     }
@@ -614,31 +627,31 @@
             return country switch
             {
                 "United States" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061"),
-                    new CometInfo(name: "Comet Encke", nextDate: "17/10/2026"),
+                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061"),
+                    new CometInfo(name: "Comet Encke", nextDate: "10/17/2026"),
                     new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
                 },
                 "United Kingdom" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet NEOWISE", nextDate: "15/03/2027"),
-                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061")
+                    new CometInfo(name: "Comet NEOWISE", nextDate: "03/15/2027"),
+                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061")
                 },
                 "Canada" => new List<CometInfo>() {
                     new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025"),
-                    new CometInfo(name: "Comet Encke", nextDate: "17/10/2026")
+                    new CometInfo(name: "Comet Encke", nextDate: "10/17/2026")
                 },
                 "Australia" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet McNaught", nextDate: "14/01/2026"),
-                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061")
+                    new CometInfo(name: "Comet McNaught", nextDate: "01/14/2026"),
+                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061")
                 },
                 "China" => new List<CometInfo>() {
                     new CometInfo(name: "Comet Ikeya–Zhang", nextDate: "01/04/2030"),
-                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061")
+                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061")
                 },
                 _ => new List<CometInfo>() {
                     // Famous comets visible globally as fallback
-                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061"),
-                    new CometInfo(name: "Comet Encke", nextDate: "17/10/2026"),
-                    new CometInfo(name: "Comet NEOWISE", nextDate: "15/03/2027"),
+                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061"),
+                    new CometInfo(name: "Comet Encke", nextDate: "10/17/2026"),
+                    new CometInfo(name: "Comet NEOWISE", nextDate: "03/15/2027"),
                     new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
                 }
             };
@@ -648,35 +661,35 @@
             return timezone switch
             {
                 "Eastern Standard Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061"),
+                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061"),
                     new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
                 },
                 "Central Standard Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Encke", nextDate: "17/10/2026"),
+                    new CometInfo(name: "Comet Encke", nextDate: "10/17/2026"),
                     new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
                 },
                 "Mountain Standard Time" => new List<CometInfo>() {
                     new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
                 },
                 "Pacific Standard Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet NEOWISE", nextDate: "15/03/2027")
+                    new CometInfo(name: "Comet NEOWISE", nextDate: "03/015/2027")
                 },
                 "Greenwich Mean Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061")
+                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061")
                 },
                 "Central European Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Encke", nextDate: "17/10/2026")
+                    new CometInfo(name: "Comet Encke", nextDate: "10/17/2026")
                 },
                 "Australian Eastern Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet McNaught", nextDate: "14/01/2026")
+                    new CometInfo(name: "Comet McNaught", nextDate: "01/014/2026")
                 },
                 "China Standard Time" => new List<CometInfo>() {
                     new CometInfo(name: "Comet Ikeya–Zhang", nextDate: "01/04/2030")
                 },
                 _ => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Halley", nextDate: "28/07/2061"),
-                    new CometInfo(name: "Comet Encke", nextDate: "17/10/2026"),
-                    new CometInfo(name: "Comet NEOWISE", nextDate: "15/03/2027"),
+                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061"),
+                    new CometInfo(name: "Comet Encke", nextDate: "10/17/2026"),
+                    new CometInfo(name: "Comet NEOWISE", nextDate: "03/15/2027"),
                     new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
                 }
             };
@@ -685,9 +698,9 @@
         {
             // If location is shared, use a global list as fallback (real app: use astronomy API)
             return new List<CometInfo>() {
-                new CometInfo(name: "Comet Halley", nextDate: "28/07/2061"),
-                new CometInfo(name: "Comet Encke", nextDate: "17/10/2026"),
-                new CometInfo(name: "Comet NEOWISE", nextDate: "15/03/2027"),
+                new CometInfo(name: "Comet Halley", nextDate: "07/28/2061"),
+                new CometInfo(name: "Comet Encke", nextDate: "10/17/2026"),
+                new CometInfo(name: "Comet NEOWISE", nextDate: "03/15/2027"),
                 new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
             };
         }
