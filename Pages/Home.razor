@@ -86,7 +86,7 @@
                 <div class="moon-phase-details mt-2">
                     <span style="color:#fff;">Moonrise: <b>@FormatTime(astronomyData.Moonrise)</b></span><br />
                     <span style="color:#fff;">Moonset: <b>@FormatTime(astronomyData.Moonset)</b></span><br />
-                    <span style="color:#fff;">Moon Illumination: <b>@astronomyData.MoonIlluminationPercentage</b></span><br />
+                    <span style="color:#fff;">Moon Illumination: <b>@astronomyData.MoonIlluminationPercentage%</b></span><br />
                     <span style="color:#fff;">Sunrise: <b>@FormatTime(astronomyData.Sunrise)</b></span><br />
                     <span style="color:#fff;">Sunset: <b>@FormatTime(astronomyData.Sunset)</b></span><br />
                     <span style="color:#fff;">Solar Noon: <b>@FormatTime(astronomyData.SolarNoon)</b></span><br />
@@ -94,24 +94,10 @@
                     <span style="color:#fff;">Current Time: <b>@FormatTime(astronomyData.CurrentTime, showSeconds: true)</b></span>
                 </div>
     // Helper to determine if the selected country/timezone is US or US timezone
-    bool IsUSLocale()
-    {
-        if (string.IsNullOrEmpty(selectedCountry) && string.IsNullOrEmpty(selectedTimezone)) return false;
-        if (!string.IsNullOrEmpty(selectedCountry) && selectedCountry.ToLower().Contains(value: "united states")) return true;
-        if (!string.IsNullOrEmpty(selectedTimezone))
-        {
-            string[]? usTz = new[] { "Eastern Standard Time", "Central Standard Time", "Mountain Standard Time", "Pacific Standard Time" };
-            return usTz.Any(tz => selectedTimezone.Contains(tz));
-        }
-        return false;
-    }
-
-    // Format time as 12-hour with AM/PM for US, otherwise return as-is
+    // Format time as 12-hour with AM/PM for all countries and timezones
     string FormatTime(string? time, bool showSeconds = false)
     {
         if (string.IsNullOrWhiteSpace(time)) return string.Empty;
-        if (!IsUSLocale()) return time;
-        // Try to parse as HH:mm or HH:mm:ss(.fff)
         DateTime dt;
         if (DateTime.TryParseExact(time, new[] { "H:mm", "HH:mm", "H:mm:ss", "HH:mm:ss", "H:mm:ss.fff", "HH:mm:ss.fff" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out dt))
         {
@@ -215,22 +201,15 @@
     // Helper to determine if the selected country/timezone is US or US timezone
     private bool IsUSLocale()
     {
-        if (string.IsNullOrEmpty(selectedCountry) && string.IsNullOrEmpty(selectedTimezone)) return false;
-        if (!string.IsNullOrEmpty(selectedCountry) && selectedCountry.ToLower().Contains(value: "united states")) return true;
-        if (!string.IsNullOrEmpty(selectedTimezone))
-        {
-            string[]? usTz = new[] { "Eastern Standard Time", "Central Standard Time", "Mountain Standard Time", "Pacific Standard Time" };
-            return usTz.Any(tz => selectedTimezone.Contains(tz));
-        }
-        return false;
+        // Always return true so all countries and timezones use AM/PM formatting
+        return true;
     }
 
     // Format time as 12-hour with AM/PM for US, otherwise return as-is
     private string FormatTime(string? time, bool showSeconds = false)
     {
         if (string.IsNullOrWhiteSpace(time)) return string.Empty;
-        if (!IsUSLocale()) return time;
-        // Try to parse as HH:mm or HH:mm:ss(.fff)
+        // Always format as 12-hour with AM/PM for all countries/timezones
         DateTime dt;
         if (DateTime.TryParseExact(time, new[] { "H:mm", "HH:mm", "H:mm:ss", "HH:mm:ss", "H:mm:ss.fff", "HH:mm:ss.fff" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out dt))
         {

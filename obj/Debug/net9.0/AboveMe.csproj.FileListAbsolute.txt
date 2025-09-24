@@ -1077,10 +1077,10 @@ C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\87vkl7olhb-st3wwc8rqy.gz
 C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\78vgvdzqzi-zbl9qys38n.gz
 C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\kxe3k7o8b8-trsn1znqy7.gz
 C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\eqzyl8vvnz-p3s9fosc89.gz
-C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.gd3enaea8k.wasm
-C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.igw1f2c6kx.pdb
-C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.gd3enaea8k.wasm.gz
-C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.igw1f2c6kx.pdb.gz
-C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\njnrpvac16-gd3enaea8k.gz
-C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\1i8nlav4m4-igw1f2c6kx.gz
-C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\032o2wsu53-ry3e4l2gfc.gz
+C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.oglk5v3fq0.wasm
+C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.uldwt56r8j.pdb
+C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.oglk5v3fq0.wasm.gz
+C:\Users\HP\Desktop\AboveMe\bin\Debug\net9.0\wwwroot\_framework\AboveMe.uldwt56r8j.pdb.gz
+C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\njnrpvac16-oglk5v3fq0.gz
+C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\1i8nlav4m4-uldwt56r8j.gz
+C:\Users\HP\Desktop\AboveMe\obj\Debug\net9.0\compressed\032o2wsu53-pyopcy7dwz.gz
