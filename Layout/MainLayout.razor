@@ -2,9 +2,9 @@
 @inherits LayoutComponentBase
 <div class="starry-bg" id="starry-bg"></div>
 <div class="page">
-    <div class="sidebar">
+    @* <div class="sidebar">
         <NavMenu />
-    </div>
+    </div> *@
 
     <main>
         <div class="top-row px-4">
@@ -22,7 +22,7 @@
     {
         if (firstRender && JS != null)
         {
-            await JS.InvokeVoidAsync("renderStars");
+            await JS.InvokeVoidAsync(identifier: "renderStars");
         }
     }
     [Inject] IJSRuntime? JS { get; set; }
