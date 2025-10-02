@@ -12,4 +12,7 @@ This is a .NET Blazor WebAssembly project for an astronomy-themed app called Abo
 - Ensure accessibility standards are met for users with disabilities
 - Write unit tests for critical components and services
 - Use dependency injection for services
+- Follow a consistent coding style throughout the project
+- Use asynchronous programming for API calls and data fetching
+- Ensure proper error handling and user feedback for API failures or data issues
 

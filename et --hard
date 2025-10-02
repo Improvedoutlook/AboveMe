@@ -1,0 +1,17 @@
+[33mf5a5041[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m -moved git ingnore file to www root folder and added bin files
+[33m6e0696d[m Remove bin folder from repo and update .gitignore
+[33md1db238[m -dropped nav links on nav bar for now
+[33m4f71d5f[m -adjusted time display for all countries -added % to moon data
+[33m85fcc30[m Merge branch 'main' of https://github.com/Improvedoutlook/AboveMe
+[33m4cbe12d[m -adjusted comet date rendering -added images for moonphases and logic for displaying with current moon data -added bin files to gitignore
+[33m49e3a31[m Updated README.md
+[33mc108e5e[m -Fixed comet data not displaying -Added field for China and CST
+[33m1c285c8[m -Added shooting star to starry.js -Adjusted name of Constellations button -Ensured NASA API data and picture render
+[33m0e6fe74[m -More package updates
+[33m839a618[m .Net package updates
+[33m5f62ce7[m Merge branch 'main' of https://github.com/Improvedoutlook/AboveMe
+[33m09515eb[m nuget package updates
+[33m4d12e82[m Update README.md
+[33m2ae3fe9[m added metadata to the compiled output of the project
+[33mcd3e2df[m Added MIT LICENSE
+[33md891666[m first commit
