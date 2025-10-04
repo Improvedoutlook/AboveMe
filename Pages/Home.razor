@@ -388,7 +388,58 @@
         }
         else if (!string.IsNullOrEmpty(selectedTimezone))
         {
-            Cities = new List<string>();
+            // Assign a city and state based on US timezone selection
+            string city = string.Empty;
+            string state = string.Empty;
+            string country = "United States";
+            switch (selectedTimezone)
+            {
+                case "Eastern Standard Time":
+                    city = "New York";
+                    state = "NY";
+                    break;
+                case "Central Standard Time":
+                    city = "Kansas City";
+                    state = "KS";
+                    break;
+                case "Mountain Standard Time":
+                    city = "Denver";
+                    state = "CO";
+                    break;
+                case "Pacific Standard Time":
+                    city = "Los Angeles";
+                    state = "CA";
+                    break;
+                case "Greenwich Mean Time":
+                    city = "London";
+                    state = string.Empty;
+                    country = "United Kingdom";
+                    break;
+                case "Central European Time":
+                    city = "Berlin";
+                    state = string.Empty;
+                    country = "Germany";
+                    break;
+                case "Australian Eastern Time":
+                    city = "Sydney";
+                    state = string.Empty;
+                    country = "Australia";
+                    break;
+                case "China Standard Time":
+                    city = "Beijing";
+                    state = string.Empty;
+                    country = "China";
+                    break;
+                default:
+                    city = string.Empty;
+                    state = string.Empty;
+                    country = string.Empty;
+                    break;
+            }
+            selectedCity = city;
+            Cities = string.IsNullOrEmpty(city) ? new List<string>() : new List<string>() { city };
+            // Store state and country for location string
+            selectedCountry = country;
             await FetchAstronomyDataAsync();
         }
         else
@@ -724,10 +775,39 @@
             }
             else
             {
-                // Build location string from city, country, timezone
+                // Build location string from city, state, country for US timezones
                 if (!string.IsNullOrEmpty(selectedCity) && !string.IsNullOrEmpty(selectedCountry))
                 {
-                    locationString = $"{selectedCity}, {selectedCountry}";
+                    string state = string.Empty;
+                    if (selectedCountry == "United States")
+                    {
+                        // Map city to state for US timezones
+                        switch (selectedCity)
+                        {
+                            case "New York":
+                                state = "NY";
+                                break;
+                            case "Kansas City":
+                                state = "KS";
+                                break;
+                            case "Denver":
+                                state = "CO";
+                                break;
+                            case "Los Angeles":
+                                state = "CA";
+                                break;
+                            default:
+                                state = string.Empty;
+                                break;
+                        }
+                        locationString = !string.IsNullOrEmpty(state)
+                            ? $"{selectedCity}, {state}, {selectedCountry}"
+                            : $"{selectedCity}, {selectedCountry}";
+                    }
+                    else
+                    {
+                        locationString = $"{selectedCity}, {selectedCountry}";
+                    }
                 }
                 else if (!string.IsNullOrEmpty(selectedCountry))
                 {
