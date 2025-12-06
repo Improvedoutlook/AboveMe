@@ -1,0 +1,11 @@
+{
+  "extends": "stylelint-config-standard",
+  "ignoreFiles": [
+    "wwwroot/lib/bootstrap/dist/css/bootstrap.css"
+  ],
+  "rules": {
+    "property-no-unknown": [true, {
+      "ignoreProperties": ["-webkit-appearance"]
+    }]
+  }
+}
