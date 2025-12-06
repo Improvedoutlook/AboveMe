@@ -1,3 +1,10 @@
+/* Ensure all .form-control placeholders are visible (white text) */
+input.form-control::placeholder,
+select.form-control::placeholder,
+textarea.form-control::placeholder {
+    color: #fff !important;
+    opacity: 1;
+}
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
