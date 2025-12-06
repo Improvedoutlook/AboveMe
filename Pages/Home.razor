@@ -81,7 +81,7 @@
                     "WANING_CRESCENT" => "WANING_CRESCENT.jpg",
                     _ => "NEW_MOON.jpg"
                 };
-                <img src="moonphases/@imageFile" alt="@moonPhase.Replace("_", " ")" class="moon-img" style="max-width:120px;" />
+                <img src="moonphases/@imageFile" alt="@moonPhase.Replace(oldValue: "_", newValue: " ")" class="moon-img" style="max-width:120px;" />
                 <div class="moon-phase-label mt-2">@astronomyData.MoonPhase</div>
                 <div class="moon-phase-details mt-2">
                     <span style="color:#fff;">Moonrise: <b>@FormatTime(astronomyData.Moonrise)</b></span><br />
@@ -347,11 +347,11 @@
         showLunarEclipse = false;
         showConstellations = false;
         showComets = false;
-        ipGeoApiKey = Environment.GetEnvironmentVariable("IPGEO_API_KEY");
+        ipGeoApiKey = Environment.GetEnvironmentVariable(variable: "IPGEO_API_KEY");
         // Use the provided ipgeolocation API key directly
         astronomyApiKey = "7b308a582e5043d8a59ae2edcd5296d8";
         // NASA API key: set via env var for security, fallback to provided key for demo only
-        nasaApiKey = Environment.GetEnvironmentVariable("NASA_API_KEY") ?? "DCOJ8SYkVW49IyCH8mhZJuGamWTIYfW2Hhd6afgX";
+        nasaApiKey = Environment.GetEnvironmentVariable(variable: "NASA_API_KEY") ?? "DCOJ8SYkVW49IyCH8mhZJuGamWTIYfW2Hhd6afgX";
     }
 
     bool IsQueryChanged()
@@ -453,7 +453,7 @@
     {
         if (firstRender && shareLocation && JS != null)
         {
-            var pos = await JS.InvokeAsync<GeolocationResult>("getUserLocation");
+            GeolocationResult? pos = await JS.InvokeAsync<GeolocationResult>(identifier: "getUserLocation");
             if (pos != null)
             {
                 userLatitude = pos.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -831,8 +831,8 @@
             HttpResponseMessage? response = await Http.GetAsync(url);
             if (response.IsSuccessStatusCode)
             {
-                var json = await response.Content.ReadAsStringAsync();
-                await JS.InvokeVoidAsync("console.log", $"Astronomy API response: {json}");
+                string? json = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync(identifier: "console.log", $"Astronomy API response: {json}");
                 // The v2 API nests astronomy data under 'astronomy' and location under 'location'
                 using System.Text.Json.JsonDocument? doc = System.Text.Json.JsonDocument.Parse(json);
                 System.Text.Json.JsonElement root = doc.RootElement;

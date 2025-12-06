@@ -23,9 +23,9 @@ window.renderStars = function () {
         const STAR_COUNT = 5; // Number of shooting stars at a time
         const MIN_INTERVAL = 2000; // Minimum ms between shooting stars
         const MAX_INTERVAL = 7000; // Maximum ms between shooting stars
-        const SHOOTING_STAR_DURATION = 1800; // ms for a shooting star to cross the sky
+        const SHOOTING_STAR_DURATION = 1200; // ms for a shooting star to cross the sky
         const STAR_COLOR = 'rgba(255,255,255,0.85)';
-        const STAR_LENGTH = 220; // px (longer)
+        const STAR_LENGTH = 275; // px (longer)
         const STAR_WIDTH = 1; // px (thinner)
         const STAR_FADE = 0.7; // fade out at end
 
