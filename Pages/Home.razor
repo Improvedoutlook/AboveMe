@@ -3,8 +3,7 @@
 @using Microsoft.JSInterop
 @using System.Net.Http
 @using System.Text.Json.Serialization
-
-<PageTitle>Home</PageTitle>
+@using AboveMe.Services
 
 <div class="aboveme-form">
     <div class="form-group">
@@ -171,31 +170,43 @@
         <div class="webb-display mt-4 text-center">
             @if (isLoadingWebbData)
             {
-                <div class="text-info">Loading Webb image...</div>
+                <div class="text-info">Loading Webb Space Telescope image from STScI MAST archive...</div>
             }
             else if (!string.IsNullOrEmpty(WebbError))
             {
                 <div class="text-warning" style="color: #ffc107;">@WebbError</div>
             }
-            else if (webbData == null)
+            else if (jwstImageData == null)
             {
-                <div class="text-warning">Unable to load Webb data. Please try again.</div>
+                <div class="text-warning">Unable to load Webb telescope data. Please try again.</div>
             }
             else
             {
-                if (!string.IsNullOrWhiteSpace(webbData.ImageUrl))
+                @* Display the JWST image *@
+                @if (!string.IsNullOrEmpty(currentImageUrl))
                 {
-                    <img src="@webbData.ImageUrl" alt="@(webbData.Title ?? "James Webb Space Telescope image")" style="max-width:100%; border-radius:8px; margin-bottom:1em;" role="img" />
+                    <img src="@currentImageUrl" 
+                         alt="@jwstImageData.DisplayTitle" 
+                         style="max-width:100%; border-radius:8px; margin-bottom:1em;" 
+                         role="img"
+                         @onerror="HandleImageError" />
                 }
-                <div style="color:#fff; font-weight:bold; font-size:1.1em;">@webbData.Title</div>
-                @if (!string.IsNullOrWhiteSpace(webbData.Description))
+                else
                 {
-                    <div style="color:#fff; margin-top:0.5em;">@webbData.Description</div>
+                    <div class="text-info" style="padding: 2em; background: rgba(255,255,255,0.1); border-radius:8px; margin-bottom:1em;">
+                        <i class="bi bi-image" style="font-size:2em;"></i>
+                        <p style="margin-top:0.5em;">Image not currently available for this observation</p>
+                    </div>
                 }
-                @if (!string.IsNullOrWhiteSpace(webbData.DateCreated))
-                {
-                    <div style="color:#fff; margin-top:0.5em; font-size:0.9em;">Date: @webbData.DateCreated</div>
-                }
+                
+                <div style="color:#fff; font-weight:bold; font-size:1.1em;">@jwstImageData.TargetName</div>
+                <div style="color:#ccc; margin-top:0.5em; font-size:0.95em;">
+                    <strong>Instrument:</strong> @jwstImageData.InstrumentName | 
+                    <strong>Filter:</strong> @jwstImageData.Filter
+                </div>
+                <div style="color:#ccc; margin-top:0.5em; font-size:0.9em;">
+                    <strong>Observed:</strong> @jwstImageData.FormattedDate
+                </div>
             }
         </div>
     }
@@ -303,6 +314,7 @@
     private object? lastNasaQueryParams; // Use a tuple or class if you want to track more params
 
     [Inject] IJSRuntime JS { get; set; } = default!;
+    [Inject] JwstImageService JwstService { get; set; } = default!;
     @inject HttpClient Http
 
     public class GeolocationResult
@@ -376,17 +388,9 @@
     private NasaApodData? cachedNasaData;
     private NasaApodData? nasaData;
     private bool isLoadingWebbData;
-    private WebbData? cachedWebbData;
-    private WebbData? webbData;
-
-    // Webb Data DTO
-    private class WebbData
-    {
-        public string? ImageUrl { get; set; }
-        public string? Title { get; set; }
-        public string? Description { get; set; }
-        public string? DateCreated { get; set; }
-    }
+    private JwstImageData? jwstImageData;
+    private string currentImageUrl = string.Empty;
+    private int imageUrlIndex = 0; // 0 = preview, 1 = thumbnail, 2 = full size
 
     protected override void OnInitialized()
     {
@@ -995,7 +999,7 @@
     async void ToggleWebb()
     {
         showWebb = !showWebb;
-        if (showWebb && webbData == null)
+        if (showWebb && jwstImageData == null)
         {
             isLoadingWebbData = true;
             StateHasChanged();
@@ -1005,251 +1009,73 @@
         }
     }
 
+    /// <summary>
+    /// Fetch JWST data from STScI MAST archive
+    /// </summary>
     async Task FetchWebbDataAsync()
     {
-        // Use cached data if available (but allow bypassing cache by clearing it first if needed)
-        if (cachedWebbData != null)
-        {
-            webbData = cachedWebbData;
-            WebbError = string.Empty;
-            return;
-        }
-
         isLoadingWebbData = true;
         WebbError = string.Empty;
-        webbData = null;
+        jwstImageData = null;
         StateHasChanged();
 
-        // Search for famous Webb telescope observations with very specific terms
-        string[] searchTerms = { 
-            "carina+nebula+infrared",
-            "southern+ring+nebula+infrared", 
-            "pillars+of+creation+infrared",
-            "stephan+quintet+galaxy",
-            "deep+field+galaxies",
-            "tarantula+nebula+infrared",
-            "cartwheel+galaxy+jwst",
-            "phantom+galaxy+m74",
-            "jupiter+webb+infrared",
-            "neptune+webb+rings",
-            "orion+nebula+webb",
-            "whirlpool+galaxy+m51"
-        };
-        
-        // Randomize the search order
-        Random random = new Random();
-        searchTerms = searchTerms.OrderBy(x => random.Next()).ToArray();
-        
-        bool foundImage = false;
-        
-        // Terms to exclude (people, events, hardware)
-        string[] excludeTerms = { 
-            "team", "administrator", "director", "manager", "scientist", "engineer",
-            "meeting", "ceremony", "portrait", "people", "person", "staff", "crew"
-        };
-        
-        foreach (string searchTerm in searchTerms)
+        try
         {
-            string url = $"https://images-api.nasa.gov/search?q={searchTerm}&media_type=image";
-            await JS.InvokeVoidAsync(identifier: "console.log", $"Webb API url: {url}");
+            // Get a random JWST image from the MAST archive
+            jwstImageData = await JwstService.GetRandomJwstImageAsync();
 
-            try
+            if (jwstImageData == null)
             {
-                HttpResponseMessage response = await Http.GetAsync(url);
-                if (!response.IsSuccessStatusCode)
-                {
-                    continue; // Try next search term
-                }
-
-                using var stream = await response.Content.ReadAsStreamAsync();
-                using var doc = await System.Text.Json.JsonDocument.ParseAsync(stream);
-                
-                var root = doc.RootElement;
-                
-                // Navigate: collection.items
-                if (!root.TryGetProperty("collection", out var collection))
-                {
-                    continue;
-                }
-
-                if (!collection.TryGetProperty("items", out var items))
-                {
-                    continue;
-                }
-
-                // Check if items array has at least one element
-                if (items.GetArrayLength() == 0)
-                {
-                    continue; // Try next search term
-                }
-
-                // Collect valid items (filtering out people/events)
-                var validItems = new List<System.Text.Json.JsonElement>();
-                int itemCount = Math.Min(items.GetArrayLength(), 10); // Check up to 10 items
-                
-                for (int i = 0; i < itemCount; i++)
-                {
-                    var item = items[i];
-                    bool isValid = true;
-                    
-                    // Check title and description for excluded terms
-                    if (item.TryGetProperty("data", out var itemData) && itemData.GetArrayLength() > 0)
-                    {
-                        var itemDataFirst = itemData[0];
-                        string combinedText = "";
-                        
-                        if (itemDataFirst.TryGetProperty("title", out var titleElem))
-                        {
-                            combinedText += titleElem.GetString()?.ToLower() ?? "";
-                        }
-                        
-                        if (itemDataFirst.TryGetProperty("description", out var descElem))
-                        {
-                            combinedText += " " + (descElem.GetString()?.ToLower() ?? "");
-                        }
-                        
-                        // Check if this item should be excluded
-                        foreach (string excludeTerm in excludeTerms)
-                        {
-                            if (combinedText.Contains(excludeTerm))
-                            {
-                                isValid = false;
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (isValid)
-                    {
-                        validItems.Add(item);
-                    }
-                }
-                
-                if (validItems.Count == 0)
-                {
-                    continue; // Try next search term
-                }
-                
-                // Randomly select from valid items
-                var firstItem = validItems[random.Next(validItems.Count)];
-
-                // Extract image URL from links[0].href
-                string? imageUrl = null;
-                if (firstItem.TryGetProperty("links", out var links) && links.GetArrayLength() > 0)
-            {
-                var firstLink = links[0];
-                if (firstLink.TryGetProperty("href", out var hrefElement))
-                {
-                    imageUrl = hrefElement.GetString();
-                }
+                WebbError = "No JWST images found in the archive. The telescope data may be temporarily unavailable.";
+                return;
             }
 
-            if (string.IsNullOrWhiteSpace(imageUrl))
-            {
-                continue; // Try next search term
-            }
+            // Set initial image URL to preview (index 0)
+            imageUrlIndex = 0;
+            currentImageUrl = jwstImageData.PreviewUrl;
+            
+            // Debug: Log the image URL
+            await JS.InvokeVoidAsync("console.log", $"JWST Image URL: {currentImageUrl}");
+            await JS.InvokeVoidAsync("console.log", $"JWST Target: {jwstImageData.TargetName}");
 
-            // Extract metadata from data[0]
-            string? title = null;
-            string? description = null;
-            string? dateCreated = null;
-
-            if (firstItem.TryGetProperty("data", out var dataArray) && dataArray.GetArrayLength() > 0)
-            {
-                var firstData = dataArray[0];
-                
-                if (firstData.TryGetProperty("title", out var titleElement))
-                    title = titleElement.GetString();
-                
-                if (firstData.TryGetProperty("description", out var descElement))
-                {
-                    description = descElement.GetString();
-                    
-                    // Clean up description: remove HTML tags and unwanted text
-                    if (!string.IsNullOrWhiteSpace(description))
-                    {
-                        // Remove HTML tags (including self-closing tags and comments)
-                        description = System.Text.RegularExpressions.Regex.Replace(description, "<.*?>", " ");
-                        
-                        // Decode common HTML entities
-                        description = description.Replace("&nbsp;", " ")
-                                                 .Replace("&amp;", "&")
-                                                 .Replace("&lt;", "<")
-                                                 .Replace("&gt;", ">")
-                                                 .Replace("&quot;", "\"")
-                                                 .Replace("&#39;", "'")
-                                                 .Replace("&apos;", "'")
-                                                 .Replace("&mdash;", "—")
-                                                 .Replace("&ndash;", "–")
-                                                 .Replace("&hellip;", "…");
-                        
-                        // Remove common NASA footer text
-                        var cutOffPhrases = new[] { 
-                            "NASA image use policy", 
-                            "Credits:", 
-                            "Read more:",
-                            "Follow us on",
-                            "Like us on",
-                            "Find us on",
-                            "Image credit:",
-                            "Image credits:",
-                            "Photo credit:",
-                            "Photo credits:"
-                        };
-                        
-                        foreach (var phrase in cutOffPhrases)
-                        {
-                            int index = description.IndexOf(phrase, StringComparison.OrdinalIgnoreCase);
-                            if (index > 0)
-                            {
-                                description = description.Substring(0, index).Trim();
-                                break;
-                            }
-                        }
-                        
-                        // Clean up extra whitespace and normalize line breaks
-                        description = System.Text.RegularExpressions.Regex.Replace(description, @"\s+", " ").Trim();
-                    }
-                }
-                
-                if (firstData.TryGetProperty("date_created", out var dateElement))
-                {
-                    dateCreated = dateElement.GetString();
-                    // Format date if it's in ISO format
-                    if (!string.IsNullOrWhiteSpace(dateCreated) && DateTime.TryParse(dateCreated, out DateTime dt))
-                    {
-                        dateCreated = dt.ToString("MMMM dd, yyyy");
-                    }
-                }
-            }
-
-            // Create and cache Webb data
-            webbData = new WebbData
-            {
-                ImageUrl = imageUrl,
-                Title = title,
-                Description = description,
-                DateCreated = dateCreated
-            };
-            cachedWebbData = webbData;
             WebbError = string.Empty;
-            foundImage = true;
-            break; // Exit the foreach loop
         }
         catch (Exception ex)
         {
-            // Continue to next search term
-            await JS.InvokeVoidAsync(identifier: "console.log", $"Webb API Error for {searchTerm}: {ex.Message}");
-            continue;
+            WebbError = $"Failed to load JWST data from STScI MAST archive: {ex.Message}";
+            await JS.InvokeVoidAsync("console.error", $"JWST fetch error: {ex}");
+        }
+        finally
+        {
+            isLoadingWebbData = false;
+            StateHasChanged();
         }
     }
-    
-    if (!foundImage)
+
+    /// <summary>
+    /// Handle image loading errors by trying fallback URLs
+    /// </summary>
+    async Task HandleImageError()
     {
-        WebbError = "No Webb telescope images found. Please try again later.";
-    }
-    
-    isLoadingWebbData = false;
-    StateHasChanged();
+        if (jwstImageData == null) return;
+
+        imageUrlIndex++;
+
+        // Try fallback URLs: preview -> thumbnail -> full size
+        currentImageUrl = imageUrlIndex switch
+        {
+            0 => jwstImageData.PreviewUrl,
+            1 => jwstImageData.ThumbnailUrl,
+            2 => jwstImageData.FullSizeUrl,
+            _ => string.Empty
+        };
+
+        if (string.IsNullOrEmpty(currentImageUrl) || imageUrlIndex > 2)
+        {
+            WebbError = "Unable to load preview image for this observation. The image may not be available yet.";
+            await JS.InvokeVoidAsync("console.warn", $"All image URLs failed for observation {jwstImageData.ObsId}");
+        }
+
+        StateHasChanged();
     }
 }
