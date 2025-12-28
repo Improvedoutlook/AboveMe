@@ -1,9 +1,8 @@
-﻿@page "/"
+@page "/"
 
 @using Microsoft.JSInterop
 @using System.Net.Http
 @using System.Text.Json.Serialization
-@using AboveMe.Services
 
 <div class="aboveme-form">
     <div class="form-group">
@@ -168,46 +167,15 @@
     @if (showWebb)
     {
         <div class="webb-display mt-4 text-center">
-            @if (isLoadingWebbData)
-            {
-                <div class="text-info">Loading Webb Space Telescope image from STScI MAST archive...</div>
-            }
-            else if (!string.IsNullOrEmpty(WebbError))
-            {
-                <div class="text-warning" style="color: #ffc107;">@WebbError</div>
-            }
-            else if (jwstImageData == null)
-            {
-                <div class="text-warning">Unable to load Webb telescope data. Please try again.</div>
-            }
-            else
-            {
-                @* Display the JWST image *@
-                @if (!string.IsNullOrEmpty(currentImageUrl))
-                {
-                    <img src="@currentImageUrl" 
-                         alt="@jwstImageData.DisplayTitle" 
-                         style="max-width:100%; border-radius:8px; margin-bottom:1em;" 
-                         role="img"
-                         @onerror="HandleImageError" />
-                }
-                else
-                {
-                    <div class="text-info" style="padding: 2em; background: rgba(255,255,255,0.1); border-radius:8px; margin-bottom:1em;">
-                        <i class="bi bi-image" style="font-size:2em;"></i>
-                        <p style="margin-top:0.5em;">Image not currently available for this observation</p>
-                    </div>
-                }
-                
-                <div style="color:#fff; font-weight:bold; font-size:1.1em;">@jwstImageData.TargetName</div>
-                <div style="color:#ccc; margin-top:0.5em; font-size:0.95em;">
-                    <strong>Instrument:</strong> @jwstImageData.InstrumentName | 
-                    <strong>Filter:</strong> @jwstImageData.Filter
-                </div>
-                <div style="color:#ccc; margin-top:0.5em; font-size:0.9em;">
-                    <strong>Observed:</strong> @jwstImageData.FormattedDate
-                </div>
-            }
+            <img src="@selectedImagePath" 
+                 alt="@selectedTitle" 
+                 style="max-width:100%; border-radius:8px; margin-bottom:1em;" 
+                 role="img" />
+            
+            <div style="color:#fff; font-weight:bold; font-size:1.3em; margin-bottom:0.8em;">@selectedTitle</div>
+            <div style="color:#ddd; font-size:1em; line-height:1.6; text-align:left; max-width:800px; margin:0 auto;">
+                @selectedDescription
+            </div>
         </div>
     }
     <div class="form-group mt-3">
@@ -278,6 +246,59 @@
         ("Australian Eastern Time", "Australian Eastern Time", "UTC+10"),
         ("China Standard Time", "China Standard Time", "UTC+8")
     };
+
+    // Webb Space Telescope Image Metadata
+    private record WebbImageInfo(int Number, string Title, string ImagePath, string DescriptionPath);
+    
+    private static readonly List<WebbImageInfo> WebbImages = new()
+    {
+        new(1, "NASA Missions Spot Cosmic 'Wreath' Displaying Stellar Circle of Life", 
+            "Webb Space Telescope Images/1.NASA Missions Spot Cosmic ‘Wreath’ Displaying Stellar Circle of Life.jpeg", 
+            "Webb Space Telescope Images/Descriptions/1.NASA Missions Spot Cosmic ‘Wreath’ Displaying Stellar Circle of Life.txt"),
+        new(2, "A Starry View", 
+            "Webb Space Telescope Images/2.A Starry View.jpeg", 
+            "Webb Space Telescope Images/Descriptions/2.A Starry View.txt"),
+        new(3, "Webb Sees Gassy Baby Stars", 
+            "Webb Space Telescope Images/3.Webb Sees Gassy Baby Stars.jpeg", 
+            "Webb Space Telescope Images/Descriptions/3.Webb Sees Gassy Baby Stars.txt"),
+        new(4, "A Peek Into Jupiter's Inner Life", 
+            "Webb Space Telescope Images/4.A Peek Into Jupiter’s Inner Life.jpeg", 
+            "Webb Space Telescope Images/Descriptions/4.A Peek Into Jupiter’s Inner Life.txt"),
+        new(5, "Webb Reveals New Details in Pillars of Creation", 
+            "Webb Space Telescope Images/5.Webb Reveals New Details in Pillars of Creation.jpeg", 
+            "Webb Space Telescope Images/Descriptions/5.Webb Reveals New Details in Pillars of Creation.txt"),
+        new(6, "Cassiopeia A", 
+            "Webb Space Telescope Images/6.Cassiopeia A.jpeg", 
+            "Webb Space Telescope Images/Descriptions/6.Cassiopeia A.txt"),
+        new(7, "The Penguin and the Egg", 
+            "Webb Space Telescope Images/7.The Penguin and the Egg.jpeg", 
+            "Webb Space Telescope Images/Descriptions/7.The Penguin and the Egg.txt"),
+        new(8, "Rho Ophiuchi (NIRCam Image)", 
+            "Webb Space Telescope Images/8.Rho Ophiuchi (NIRCam Image).jpeg", 
+            "Webb Space Telescope Images/Descriptions/8.Rho Ophiuchi (NIRCam Image).txt"),
+        new(9, "NGC 3627", 
+            "Webb Space Telescope Images/9.NGC 3627.jpeg", 
+            "Webb Space Telescope Images/Descriptions/9.NGC 3627.txt"),
+        new(10, "Peering into the Orion Nebula", 
+            "Webb Space Telescope Images/10.Peering into the Orion Nebula.jpeg", 
+            "Webb Space Telescope Images/Descriptions/10.Peering into the Orion Nebula.txt"),
+        new(11, "Webb Spots a Starburst", 
+            "Webb Space Telescope Images/11.Webb Spots a Starburst.jpeg", 
+            "Webb Space Telescope Images/Descriptions/11.Webb Spots a Starburst.txt"),
+        new(12, "The Horse's Mane", 
+            "Webb Space Telescope Images/12.The Horse’s Mane.jpeg", 
+            "Webb Space Telescope Images/Descriptions/12.The Horse’s Mane.txt"),
+        new(13, "X-ray & Infrared Image of Crab Nebula", 
+            "Webb Space Telescope Images/13.X-ray & Infrared Image of Crab Nebula.jpeg", 
+            "Webb Space Telescope Images/Descriptions/13.X-ray & Infrared Image of Crab Nebula.txt"),
+        new(14, "Looking Beyond the Veil", 
+            "Webb Space Telescope Images/14.Looking Beyond the Veil.jpeg", 
+            "Webb Space Telescope Images/Descriptions/14.Looking Beyond the Veil.txt"),
+        new(15, "NGC 4254 (Webb Image)", 
+            "Webb Space Telescope Images/15.NGC 4254 (Webb Image).jpeg", 
+            "Webb Space Telescope Images/Descriptions/15.NGC 4254 (Webb Image).txt")
+    };
+
     private string? selectedCountry;
     private string? selectedCity;
     private string? selectedTimezone;
@@ -286,14 +307,12 @@
     private bool showLunarEclipse;
     private bool showConstellations;
     private bool showComets;
-    private bool showWebb;
     private List<string> VisibleConstellations = new List<string>();
     private List<CometInfo> NextComets = new List<CometInfo>();
     private string ConstellationError = string.Empty;
     private string CometError = string.Empty;
     private string NextLunarEclipseDate = string.Empty;
     private string LunarEclipseError = string.Empty;
-    private string WebbError = string.Empty;
     private string? ipGeoApiKey;
     private string? astronomyApiKey;
     private string? nasaApiKey;
@@ -314,7 +333,6 @@
     private object? lastNasaQueryParams; // Use a tuple or class if you want to track more params
 
     [Inject] IJSRuntime JS { get; set; } = default!;
-    [Inject] JwstImageService JwstService { get; set; } = default!;
     @inject HttpClient Http
 
     public class GeolocationResult
@@ -387,12 +405,14 @@
     private string NasaError = string.Empty;
     private NasaApodData? cachedNasaData;
     private NasaApodData? nasaData;
-    private bool isLoadingWebbData;
-    private JwstImageData? jwstImageData;
-    private string currentImageUrl = string.Empty;
-    private int imageUrlIndex = 0; // 0 = preview, 1 = thumbnail, 2 = full size
+    
+    // Webb Space Telescope state
+    private bool showWebb = false;
+    private string selectedImagePath = string.Empty;
+    private string selectedTitle = string.Empty;
+    private string selectedDescription = string.Empty;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         selectedCountry = "";
         selectedCity = "";
@@ -408,6 +428,42 @@
         astronomyApiKey = "7b308a582e5043d8a59ae2edcd5296d8";
         // NASA API key: set via env var for security, fallback to provided key for demo only
         nasaApiKey = Environment.GetEnvironmentVariable(variable: "NASA_API_KEY") ?? "DCOJ8SYkVW49IyCH8mhZJuGamWTIYfW2Hhd6afgX";
+
+        // Load random Webb Space Telescope image
+        await LoadRandomWebbImageAsync();
+    }
+
+    /// <summary>
+    /// Load a random Webb Space Telescope image and description
+    /// </summary>
+    private async Task LoadRandomWebbImageAsync()
+    {
+        try
+        {
+            // Select random image (1-15)
+            int randomNumber = Random.Shared.Next(1, 16);
+            var selectedImage = WebbImages.First(img => img.Number == randomNumber);
+            
+            selectedImagePath = selectedImage.ImagePath;
+            selectedTitle = selectedImage.Title;
+
+            // Fetch description from text file
+            try
+            {
+                selectedDescription = await Http.GetStringAsync(selectedImage.DescriptionPath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading description: {ex.Message}");
+                selectedDescription = "Description unavailable";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading Webb image: {ex.Message}");
+            selectedTitle = "Error loading image";
+            selectedDescription = "Description unavailable";
+        }
     }
 
     bool IsQueryChanged()
@@ -996,86 +1052,8 @@
         }
     }
 
-    async void ToggleWebb()
+    void ToggleWebb()
     {
         showWebb = !showWebb;
-        if (showWebb && jwstImageData == null)
-        {
-            isLoadingWebbData = true;
-            StateHasChanged();
-            await FetchWebbDataAsync();
-            isLoadingWebbData = false;
-            StateHasChanged();
-        }
-    }
-
-    /// <summary>
-    /// Fetch JWST data from STScI MAST archive
-    /// </summary>
-    async Task FetchWebbDataAsync()
-    {
-        isLoadingWebbData = true;
-        WebbError = string.Empty;
-        jwstImageData = null;
-        StateHasChanged();
-
-        try
-        {
-            // Get a random JWST image from the MAST archive
-            jwstImageData = await JwstService.GetRandomJwstImageAsync();
-
-            if (jwstImageData == null)
-            {
-                WebbError = "No JWST images found in the archive. The telescope data may be temporarily unavailable.";
-                return;
-            }
-
-            // Set initial image URL to preview (index 0)
-            imageUrlIndex = 0;
-            currentImageUrl = jwstImageData.PreviewUrl;
-            
-            // Debug: Log the image URL
-            await JS.InvokeVoidAsync("console.log", $"JWST Image URL: {currentImageUrl}");
-            await JS.InvokeVoidAsync("console.log", $"JWST Target: {jwstImageData.TargetName}");
-
-            WebbError = string.Empty;
-        }
-        catch (Exception ex)
-        {
-            WebbError = $"Failed to load JWST data from STScI MAST archive: {ex.Message}";
-            await JS.InvokeVoidAsync("console.error", $"JWST fetch error: {ex}");
-        }
-        finally
-        {
-            isLoadingWebbData = false;
-            StateHasChanged();
-        }
-    }
-
-    /// <summary>
-    /// Handle image loading errors by trying fallback URLs
-    /// </summary>
-    async Task HandleImageError()
-    {
-        if (jwstImageData == null) return;
-
-        imageUrlIndex++;
-
-        // Try fallback URLs: preview -> thumbnail -> full size
-        currentImageUrl = imageUrlIndex switch
-        {
-            0 => jwstImageData.PreviewUrl,
-            1 => jwstImageData.ThumbnailUrl,
-            2 => jwstImageData.FullSizeUrl,
-            _ => string.Empty
-        };
-
-        if (string.IsNullOrEmpty(currentImageUrl) || imageUrlIndex > 2)
-        {
-            WebbError = "Unable to load preview image for this observation. The image may not be available yet.";
-            await JS.InvokeVoidAsync("console.warn", $"All image URLs failed for observation {jwstImageData.ObsId}");
-        }
-
-        StateHasChanged();
     }
 }
