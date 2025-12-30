@@ -211,6 +211,65 @@
             }
         </div>
     }
+    <div class="form-group mt-3">
+        <button class="btn btn-primary" @onclick="ToggleMeteorShowers">@((showMeteorShowers ? "Hide" : "Show") + " Meteor Showers")</button>
+    </div>
+    @if (showMeteorShowers)
+    {
+        <div class="meteor-showers-display mt-4">
+            @if (!string.IsNullOrEmpty(MeteorShowerError))
+            {
+                <div class="text-warning text-center" style="color: #ffc107;">@MeteorShowerError</div>
+            }
+            else if (VisibleMeteorShowers == null || VisibleMeteorShowers.Count == 0)
+            {
+                <div class="text-warning text-center">No upcoming meteor showers visible from your location in 2025-2026.</div>
+            }
+            else
+            {
+                <div class="shower-list">
+                    @for (int i = 0; i < Math.Min(currentShowerDisplayCount, VisibleMeteorShowers.Count); i++)
+                    {
+                        var shower = VisibleMeteorShowers[i];
+                        <div class="shower-card" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);">
+                            <div style="color:#fff; font-weight:bold; font-size:1.2em; margin-bottom:0.5em;">@shower.Name</div>
+                            <div style="color:#ddd; margin-bottom:0.3em;"><strong>Active:</strong> @shower.ActiveStart.ToString("MMM dd") - @shower.ActiveEnd.ToString("MMM dd, yyyy")</div>
+                            <div style="color:#ddd; margin-bottom:0.3em;"><strong>Peak:</strong> @shower.PeakLocal.ToString("MMM dd, yyyy 'at' h:mm tt")</div>
+                            <div style="color:#ddd; margin-bottom:0.8em; line-height:1.5;">@shower.Description</div>
+                            <div style="color:#aaa; font-size:0.9em;">
+                                <div style="margin-bottom:0.5em;">
+                                    <div><strong>Radiant:</strong> @shower.Radiant</div>
+                                    <div style="font-size:0.85em; opacity:0.7; margin-left:0.5em;">The point in the sky where meteors appear to originate</div>
+                                </div>
+                                <div style="margin-bottom:0.5em;">
+                                    <div><strong>ZHR:</strong> @shower.ZHR</div>
+                                    <div style="font-size:0.85em; opacity:0.7; margin-left:0.5em;">Max meteors per hour under perfect dark skies</div>
+                                </div>
+                                <div style="margin-bottom:0.5em;">
+                                    <div><strong>Velocity:</strong> @shower.Velocity</div>
+                                    <div style="font-size:0.85em; opacity:0.7; margin-left:0.5em;">Speed of meteors entering Earth's atmosphere</div>
+                                </div>
+                                <div style="margin-bottom:0.5em;">
+                                    <div><strong>Parent Object:</strong> @shower.ParentObject</div>
+                                    <div style="font-size:0.85em; opacity:0.7; margin-left:0.5em;">Comet/asteroid that created the debris trail</div>
+                                </div>
+                                <div style="margin-bottom:0.5em;">
+                                    <div><strong>Moon Illumination:</strong> @shower.MoonIllumination%</div>
+                                    <div style="font-size:0.85em; opacity:0.7; margin-left:0.5em;">Moon brightness (higher = more light interference)</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                @if (currentShowerDisplayCount < VisibleMeteorShowers.Count)
+                {
+                    <div class="text-center mt-3">
+                        <button class="btn btn-outline-light" @onclick="ShowMoreMeteorShowers">Show More</button>
+                    </div>
+                }
+            }
+        </div>
+    }
 </div>
 
 @code {
@@ -307,12 +366,16 @@
     private bool showLunarEclipse;
     private bool showConstellations;
     private bool showComets;
+    private bool showMeteorShowers;
     private List<string> VisibleConstellations = new List<string>();
     private List<CometInfo> NextComets = new List<CometInfo>();
+    private List<MeteorShowerData> VisibleMeteorShowers = new List<MeteorShowerData>();
     private string ConstellationError = string.Empty;
     private string CometError = string.Empty;
     private string NextLunarEclipseDate = string.Empty;
     private string LunarEclipseError = string.Empty;
+    private string MeteorShowerError = string.Empty;
+    private int currentShowerDisplayCount = 5;
     private string? ipGeoApiKey;
     private string? astronomyApiKey;
     private string? nasaApiKey;
@@ -382,6 +445,131 @@
         }
     }
 
+    /// <summary>
+    /// Hemisphere visibility constraint for meteor showers
+    /// </summary>
+    public enum HemisphereVisibility
+    {
+        All,
+        NorthernHemisphereOnly,
+        SouthernHemisphereOnly
+    }
+
+    /// <summary>
+    /// Meteor shower data model based on American Meteor Society calendar
+    /// </summary>
+    public class MeteorShowerData
+    {
+        public string Name { get; set; }
+        public DateTime ActiveStart { get; set; }
+        public DateTime ActiveEnd { get; set; }
+        public DateTime PeakDateUTC { get; set; }
+        public TimeSpan PeakTimeUTC { get; set; }
+        public DateTime PeakLocal { get; set; } // Calculated based on user timezone
+        public string Description { get; set; }
+        public HemisphereVisibility VisibilityConstraint { get; set; }
+        public string Radiant { get; set; }
+        public int ZHR { get; set; }
+        public string Velocity { get; set; }
+        public string ParentObject { get; set; }
+        public int MoonIllumination { get; set; }
+
+        public MeteorShowerData(string name, DateTime activeStart, DateTime activeEnd, DateTime peakDateUTC, TimeSpan peakTimeUTC, string description, HemisphereVisibility visibility, string radiant, int zhr, string velocity, string parentObject, int moonIllumination)
+        {
+            Name = name;
+            ActiveStart = activeStart;
+            ActiveEnd = activeEnd;
+            PeakDateUTC = peakDateUTC;
+            PeakTimeUTC = peakTimeUTC;
+            Description = description;
+            VisibilityConstraint = visibility;
+            Radiant = radiant;
+            ZHR = zhr;
+            Velocity = velocity;
+            ParentObject = parentObject;
+            MoonIllumination = moonIllumination;
+            PeakLocal = peakDateUTC; // Default, will be calculated
+        }
+    }
+
+    // Hardcoded meteor shower data from American Meteor Society 2025-2026 calendar
+    private static readonly List<MeteorShowerData> AllMeteorShowers = new()
+    {
+        new("Quadrantids", new DateTime(2025, 12, 28), new DateTime(2026, 1, 12), new DateTime(2026, 1, 3), new TimeSpan(21, 0, 0), 
+            "The Quadrantids are one of the best annual meteor showers with a ZHR of around 120 under ideal conditions. The shower is known for its bright fireball meteors. Best viewing is in the Northern Hemisphere.",
+            HemisphereVisibility.NorthernHemisphereOnly, "Boötes", 120, "41 km/s", "Asteroid 2003 EH1", 75),
+        new("Lyrids", new DateTime(2025, 4, 16), new DateTime(2025, 4, 25), new DateTime(2025, 4, 22), new TimeSpan(22, 0, 0),
+            "The Lyrids are one of the oldest known meteor showers, observed for 2,700 years. They produce about 18 meteors per hour at peak. Best viewing is in the Northern Hemisphere during pre-dawn hours.",
+            HemisphereVisibility.NorthernHemisphereOnly, "Lyra", 18, "49 km/s", "Comet C/1861 G1 Thatcher", 15),
+        new("Eta Aquarids", new DateTime(2025, 4, 19), new DateTime(2025, 5, 28), new DateTime(2025, 5, 6), new TimeSpan(3, 0, 0),
+            "The Eta Aquarids are one of two meteor showers created by debris from Halley's Comet. They produce about 60 meteors per hour in the Southern Hemisphere and 30 per hour in the Northern Hemisphere. Best viewing is in the Southern Hemisphere.",
+            HemisphereVisibility.All, "Aquarius", 60, "66 km/s", "Comet 1P/Halley", 55),
+        new("Perseids", new DateTime(2025, 7, 17), new DateTime(2025, 8, 24), new DateTime(2025, 8, 12), new TimeSpan(21, 0, 0),
+            "The Perseids are the most popular meteor shower as they peak on warm August nights in the Northern Hemisphere. They produce up to 100 meteors per hour at peak, with bright and numerous meteors. Best viewing is in the Northern Hemisphere.",
+            HemisphereVisibility.NorthernHemisphereOnly, "Perseus", 100, "59 km/s", "Comet 109P/Swift-Tuttle", 30),
+        new("Orionids", new DateTime(2025, 10, 2), new DateTime(2025, 11, 7), new DateTime(2025, 10, 21), new TimeSpan(2, 0, 0),
+            "The Orionids are the second meteor shower created by debris from Halley's Comet. They produce about 20 meteors per hour at peak. The shower is visible from both hemispheres.",
+            HemisphereVisibility.All, "Orion", 20, "66 km/s", "Comet 1P/Halley", 85),
+        new("Leonids", new DateTime(2025, 11, 6), new DateTime(2025, 11, 30), new DateTime(2025, 11, 17), new TimeSpan(0, 0, 0),
+            "The Leonids are known for their spectacular meteor storms every 33 years. In normal years they produce about 15 meteors per hour. Best viewing is in the Northern Hemisphere during pre-dawn hours.",
+            HemisphereVisibility.NorthernHemisphereOnly, "Leo", 15, "71 km/s", "Comet 55P/Tempel-Tuttle", 90),
+        new("Geminids", new DateTime(2025, 12, 7), new DateTime(2025, 12, 17), new DateTime(2025, 12, 14), new TimeSpan(2, 0, 0),
+            "The Geminids are considered the best meteor shower of the year, producing up to 120 multi-colored meteors per hour at peak. Unlike most showers, the Geminids originate from an asteroid rather than a comet. Visible from both hemispheres.",
+            HemisphereVisibility.All, "Gemini", 120, "35 km/s", "Asteroid 3200 Phaethon", 95),
+        new("Ursids", new DateTime(2025, 12, 17), new DateTime(2025, 12, 26), new DateTime(2025, 12, 22), new TimeSpan(8, 0, 0),
+            "The Ursids are a modest shower producing about 10 meteors per hour. They are visible primarily in the Northern Hemisphere and peak just before Christmas.",
+            HemisphereVisibility.NorthernHemisphereOnly, "Ursa Minor", 10, "33 km/s", "Comet 8P/Tuttle", 10),
+        new("Quadrantids", new DateTime(2026, 12, 28), new DateTime(2027, 1, 12), new DateTime(2027, 1, 4), new TimeSpan(3, 0, 0),
+            "The Quadrantids return in 2027 with another spectacular show. One of the best annual meteor showers with bright fireball meteors. Best viewing is in the Northern Hemisphere.",
+            HemisphereVisibility.NorthernHemisphereOnly, "Boötes", 120, "41 km/s", "Asteroid 2003 EH1", 20),
+        // 2026 Meteor Showers
+        new("Lyrids", new DateTime(2026, 4, 16), new DateTime(2026, 4, 25), new DateTime(2026, 4, 22), new TimeSpan(22, 0, 0),
+            "The Lyrids return in 2026, one of the oldest known meteor showers observed for 2,700 years. They produce about 18 meteors per hour at peak. Best viewing is in the Northern Hemisphere during pre-dawn hours.",
+            HemisphereVisibility.NorthernHemisphereOnly, "Lyra", 18, "49 km/s", "Comet C/1861 G1 Thatcher", 20),
+        new("Eta Aquarids", new DateTime(2026, 4, 19), new DateTime(2026, 5, 28), new DateTime(2026, 5, 6), new TimeSpan(3, 0, 0),
+            "The Eta Aquarids in 2026, created by debris from Halley's Comet. They produce about 60 meteors per hour in the Southern Hemisphere and 30 per hour in the Northern Hemisphere.",
+            HemisphereVisibility.All, "Aquarius", 60, "66 km/s", "Comet 1P/Halley", 60),
+        new("Alpha Capricornids", new DateTime(2026, 7, 3), new DateTime(2026, 8, 15), new DateTime(2026, 7, 30), new TimeSpan(23, 0, 0),
+            "The Alpha Capricornids return in 2026. Not particularly strong, with a ZHR of only 5, but they are known for producing bright fireballs. Visible from both hemispheres.",
+            HemisphereVisibility.All, "Capricornus", 5, "23 km/s", "Comet 169P/NEAT", 45),
+        new("Delta Aquarids", new DateTime(2026, 7, 12), new DateTime(2026, 8, 23), new DateTime(2026, 7, 30), new TimeSpan(2, 0, 0),
+            "The Delta Aquarids in 2026 produce about 20 meteors per hour and are best seen from the Southern Hemisphere. They often overlap with the Alpha Capricornids.",
+            HemisphereVisibility.SouthernHemisphereOnly, "Aquarius", 20, "41 km/s", "Comet 96P/Machholz", 45),
+        new("Perseids", new DateTime(2026, 7, 17), new DateTime(2026, 8, 24), new DateTime(2026, 8, 12), new TimeSpan(21, 0, 0),
+            "The Perseids return in 2026, the most popular meteor shower as they peak on warm August nights. They produce up to 100 meteors per hour at peak, with bright and numerous meteors.",
+            HemisphereVisibility.NorthernHemisphereOnly, "Perseus", 100, "59 km/s", "Comet 109P/Swift-Tuttle", 35),
+        new("Taurids (South)", new DateTime(2026, 9, 10), new DateTime(2026, 11, 20), new DateTime(2026, 10, 10), new TimeSpan(0, 0, 0),
+            "The Southern Taurids in 2026 are a long-lasting shower known for producing bright fireballs. They have a low rate of 5 meteors per hour but are visible from both hemispheres.",
+            HemisphereVisibility.All, "Taurus", 5, "27 km/s", "Comet 2P/Encke", 80),
+        new("Orionids", new DateTime(2026, 10, 2), new DateTime(2026, 11, 7), new DateTime(2026, 10, 21), new TimeSpan(2, 0, 0),
+            "The Orionids return in 2026, the second meteor shower created by debris from Halley's Comet. They produce about 20 meteors per hour at peak. The shower is visible from both hemispheres.",
+            HemisphereVisibility.All, "Orion", 20, "66 km/s", "Comet 1P/Halley", 90),
+        new("Taurids (North)", new DateTime(2026, 10, 20), new DateTime(2026, 12, 10), new DateTime(2026, 11, 12), new TimeSpan(0, 0, 0),
+            "The Northern Taurids in 2026 complement the Southern Taurids with a similar profile - low rate but bright fireballs. Visible from both hemispheres.",
+            HemisphereVisibility.All, "Taurus", 5, "29 km/s", "Comet 2P/Encke", 95),
+        new("Leonids", new DateTime(2026, 11, 6), new DateTime(2026, 11, 30), new DateTime(2026, 11, 17), new TimeSpan(0, 0, 0),
+            "The Leonids in 2026 are known for their spectacular meteor storms every 33 years. In normal years they produce about 15 meteors per hour. Best viewing is in the Northern Hemisphere.",
+            HemisphereVisibility.NorthernHemisphereOnly, "Leo", 15, "71 km/s", "Comet 55P/Tempel-Tuttle", 95),
+        new("Geminids", new DateTime(2026, 12, 7), new DateTime(2026, 12, 17), new DateTime(2026, 12, 14), new TimeSpan(2, 0, 0),
+            "The Geminids in 2026 are considered the best meteor shower of the year, producing up to 120 multi-colored meteors per hour at peak. Visible from both hemispheres.",
+            HemisphereVisibility.All, "Gemini", 120, "35 km/s", "Asteroid 3200 Phaethon", 10),
+        new("Ursids", new DateTime(2026, 12, 17), new DateTime(2026, 12, 26), new DateTime(2026, 12, 22), new TimeSpan(8, 0, 0),
+            "The Ursids in 2026 are a modest shower producing about 10 meteors per hour. They are visible primarily in the Northern Hemisphere and peak just before Christmas.",
+            HemisphereVisibility.NorthernHemisphereOnly, "Ursa Minor", 10, "33 km/s", "Comet 8P/Tuttle", 15),
+        new("Alpha Capricornids", new DateTime(2025, 7, 3), new DateTime(2025, 8, 15), new DateTime(2025, 7, 30), new TimeSpan(23, 0, 0),
+            "The Alpha Capricornids are not particularly strong, with a ZHR of only 5, but they are known for producing bright fireballs. Visible from both hemispheres.",
+            HemisphereVisibility.All, "Capricornus", 5, "23 km/s", "Comet 169P/NEAT", 40),
+        new("Delta Aquarids", new DateTime(2025, 7, 12), new DateTime(2025, 8, 23), new DateTime(2025, 7, 30), new TimeSpan(2, 0, 0),
+            "The Delta Aquarids produce about 20 meteors per hour and are best seen from the Southern Hemisphere. They often overlap with the Alpha Capricornids.",
+            HemisphereVisibility.SouthernHemisphereOnly, "Aquarius", 20, "41 km/s", "Comet 96P/Machholz", 40),
+        new("Taurids (South)", new DateTime(2025, 9, 10), new DateTime(2025, 11, 20), new DateTime(2025, 10, 10), new TimeSpan(0, 0, 0),
+            "The Southern Taurids are a long-lasting shower known for producing bright fireballs. They have a low rate of 5 meteors per hour but are visible from both hemispheres.",
+            HemisphereVisibility.All, "Taurus", 5, "27 km/s", "Comet 2P/Encke", 75),
+        new("Taurids (North)", new DateTime(2025, 10, 20), new DateTime(2025, 12, 10), new DateTime(2025, 11, 12), new TimeSpan(0, 0, 0),
+            "The Northern Taurids complement the Southern Taurids with a similar profile - low rate but bright fireballs. Visible from both hemispheres.",
+            HemisphereVisibility.All, "Taurus", 5, "29 km/s", "Comet 2P/Encke", 90)
+    };
+
     public class NasaApodData
     {
         [JsonPropertyName(name: "copyright")]
@@ -423,6 +611,7 @@
         showConstellations = false;
         showComets = false;
         showWebb = false;
+        showMeteorShowers = false;
         ipGeoApiKey = Environment.GetEnvironmentVariable(variable: "IPGEO_API_KEY");
         // Use the provided ipgeolocation API key directly
         astronomyApiKey = "7b308a582e5043d8a59ae2edcd5296d8";
@@ -1055,5 +1244,137 @@
     void ToggleWebb()
     {
         showWebb = !showWebb;
+    }
+
+    /// <summary>
+    /// Determine user's hemisphere based on country or timezone
+    /// </summary>
+    private string GetUserHemisphere()
+    {
+        // Southern Hemisphere: Australia, AET
+        // Northern Hemisphere: US, Canada, UK, China, EST/CST/MST/PST/GMT/CET/CST-China
+        if (!string.IsNullOrEmpty(selectedCountry))
+        {
+            return selectedCountry switch
+            {
+                "Australia" => "Southern",
+                "United States" => "Northern",
+                "Canada" => "Northern",
+                "United Kingdom" => "Northern",
+                "China" => "Northern",
+                _ => "Northern" // Default to Northern
+            };
+        }
+        else if (!string.IsNullOrEmpty(selectedTimezone))
+        {
+            return selectedTimezone switch
+            {
+                "Australian Eastern Time" => "Southern",
+                "Eastern Standard Time" => "Northern",
+                "Central Standard Time" => "Northern",
+                "Mountain Standard Time" => "Northern",
+                "Pacific Standard Time" => "Northern",
+                "Greenwich Mean Time" => "Northern",
+                "Central European Time" => "Northern",
+                "China Standard Time" => "Northern",
+                _ => "Northern" // Default to Northern
+            };
+        }
+        return "Northern"; // Default
+    }
+
+    /// <summary>
+    /// Get timezone offset from selected timezone string (e.g., "UTC-5" returns -5 hours)
+    /// </summary>
+    private TimeSpan GetTimezoneOffset()
+    {
+        if (!string.IsNullOrEmpty(selectedTimezone))
+        {
+            // Find the timezone in the Timezones list and parse UTC offset
+            var tz = Timezones.FirstOrDefault(t => t.Id == selectedTimezone);
+            if (!string.IsNullOrEmpty(tz.Description))
+            {
+                // Parse "UTC-5" or "UTC+10"
+                string utcPart = tz.Description.Replace("UTC", "").Trim();
+                if (double.TryParse(utcPart, out double offset))
+                {
+                    return TimeSpan.FromHours(offset);
+                }
+            }
+        }
+        return TimeSpan.Zero; // Default to UTC
+    }
+
+    /// <summary>
+    /// Get visible meteor showers filtered by hemisphere and time, with timezone-adjusted peak times
+    /// Shows only upcoming and currently active meteor showers
+    /// </summary>
+    private List<MeteorShowerData> GetVisibleMeteorShowers()
+    {
+        string hemisphere = GetUserHemisphere();
+        TimeSpan timezoneOffset = GetTimezoneOffset();
+        DateTime now = DateTime.UtcNow;
+
+        return AllMeteorShowers
+            // Filter by hemisphere visibility
+            .Where(shower => shower.VisibilityConstraint == HemisphereVisibility.All ||
+                           (shower.VisibilityConstraint == HemisphereVisibility.NorthernHemisphereOnly && hemisphere == "Northern") ||
+                           (shower.VisibilityConstraint == HemisphereVisibility.SouthernHemisphereOnly && hemisphere == "Southern"))
+            // Show only future showers (active end date is today or later)
+            .Where(shower => shower.ActiveEnd.Date >= now.Date)
+            // Convert peak time to user's timezone
+            .Select(shower =>
+            {
+                var localPeak = shower.PeakDateUTC.Add(shower.PeakTimeUTC).Add(timezoneOffset);
+                return new MeteorShowerData(
+                    shower.Name,
+                    shower.ActiveStart,
+                    shower.ActiveEnd,
+                    shower.PeakDateUTC,
+                    shower.PeakTimeUTC,
+                    shower.Description,
+                    shower.VisibilityConstraint,
+                    shower.Radiant,
+                    shower.ZHR,
+                    shower.Velocity,
+                    shower.ParentObject,
+                    shower.MoonIllumination
+                ) { PeakLocal = localPeak };
+            })
+            // Sort chronologically by active start date
+            .OrderBy(shower => shower.ActiveStart)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Toggle meteor shower display and populate data
+    /// </summary>
+    void ToggleMeteorShowers()
+    {
+        showMeteorShowers = !showMeteorShowers;
+        if (showMeteorShowers)
+        {
+            // Check if location selected
+            if (string.IsNullOrEmpty(selectedCountry) && string.IsNullOrEmpty(selectedTimezone))
+            {
+                MeteorShowerError = "Please select a Country or Timezone";
+                VisibleMeteorShowers = new List<MeteorShowerData>();
+            }
+            else
+            {
+                MeteorShowerError = string.Empty;
+                VisibleMeteorShowers = GetVisibleMeteorShowers();
+                currentShowerDisplayCount = 5; // Reset pagination
+            }
+        }
+    }
+
+    /// <summary>
+    /// Show 5 more meteor showers in the list
+    /// </summary>
+    void ShowMoreMeteorShowers()
+    {
+        currentShowerDisplayCount += 5;
+        StateHasChanged();
     }
 }
