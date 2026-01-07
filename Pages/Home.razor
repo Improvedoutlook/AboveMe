@@ -396,6 +396,7 @@
     private object? lastNasaQueryParams; // Use a tuple or class if you want to track more params
 
     [Inject] IJSRuntime JS { get; set; } = default!;
+    [Inject] IConfiguration Configuration { get; set; } = default!;
     @inject HttpClient Http
 
     public class GeolocationResult
@@ -612,11 +613,10 @@
         showComets = false;
         showWebb = false;
         showMeteorShowers = false;
+        // Load API keys from configuration
+        nasaApiKey = Configuration["ApiKeys:NasaApiKey"] ?? "DEMO_KEY";
+        astronomyApiKey = Configuration["ApiKeys:AstronomyApiKey"] ?? "DEMO_KEY";
         ipGeoApiKey = Environment.GetEnvironmentVariable(variable: "IPGEO_API_KEY");
-        // Use the provided ipgeolocation API key directly
-        astronomyApiKey = "7b308a582e5043d8a59ae2edcd5296d8";
-        // NASA API key: set via env var for security, fallback to provided key for demo only
-        nasaApiKey = Environment.GetEnvironmentVariable(variable: "NASA_API_KEY") ?? "DCOJ8SYkVW49IyCH8mhZJuGamWTIYfW2Hhd6afgX";
 
         // Load random Webb Space Telescope image
         await LoadRandomWebbImageAsync();
@@ -1216,8 +1216,6 @@
         }
         // For APOD, lat/lon are not required, so we just call the endpoint for the current date
         string? url = $"https://api.nasa.gov/planetary/apod?api_key={nasaApiKey}";
-        await JS.InvokeVoidAsync(identifier: "console.log", $"NASA API Key: {nasaApiKey}");
-        await JS.InvokeVoidAsync(identifier: "console.log", $"NASA APOD Request URL: {url}");
         try
         {
             HttpResponseMessage? response = await Http.GetAsync(url);
@@ -1232,7 +1230,7 @@
             }
             else
             {
-                NasaError = $"Failed to fetch NASA APOD data. Status: {response.StatusCode}";
+                NasaError = $"Currently, NASA APIs are experiencing an unscheduled outage. Users are advised to check back later for updates on the status of the APIs. data. Status: {response.StatusCode}";
             }
         }
         catch (Exception ex)
