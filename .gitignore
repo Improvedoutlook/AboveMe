@@ -27,6 +27,9 @@ packages/
 *.suo
 *.sln.docstates
 
+# Configuration files with sensitive data
+wwwroot/appsettings.Development.json
+
 # Other generated assets
 *.wasm
 *.dat

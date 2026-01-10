@@ -396,14 +396,20 @@
     private object? lastNasaQueryParams; // Use a tuple or class if you want to track more params
 
     [Inject] IJSRuntime JS { get; set; } = default!;
+    [Inject] IConfiguration Configuration { get; set; } = default!;
     @inject HttpClient Http
 
     public class GeolocationResult
     {
+        [JsonPropertyName(name: "Latitude")]
         public double Latitude { get; set; }
+        [JsonPropertyName(name: "Longitude")]
         public double Longitude { get; set; }
+        [JsonPropertyName(name: "Country")]
         public string? Country { get; set; }
+        [JsonPropertyName(name: "City")]
         public string? City { get; set; }
+        [JsonPropertyName(name: "Timezone")]
         public string? Timezone { get; set; }
     }
 
@@ -612,11 +618,10 @@
         showComets = false;
         showWebb = false;
         showMeteorShowers = false;
+        // Load API keys from configuration
+        nasaApiKey = Configuration["ApiKeys:NasaApiKey"] ?? "DEMO_KEY";
+        astronomyApiKey = Configuration["ApiKeys:AstronomyApiKey"] ?? "DEMO_KEY";
         ipGeoApiKey = Environment.GetEnvironmentVariable(variable: "IPGEO_API_KEY");
-        // Use the provided ipgeolocation API key directly
-        astronomyApiKey = "7b308a582e5043d8a59ae2edcd5296d8";
-        // NASA API key: set via env var for security, fallback to provided key for demo only
-        nasaApiKey = Environment.GetEnvironmentVariable(variable: "NASA_API_KEY") ?? "DCOJ8SYkVW49IyCH8mhZJuGamWTIYfW2Hhd6afgX";
 
         // Load random Webb Space Telescope image
         await LoadRandomWebbImageAsync();
@@ -1043,8 +1048,10 @@
 
     async Task FetchAstronomyDataAsync()
     {
+        await JS.InvokeVoidAsync(identifier: "console.log", "FetchAstronomyDataAsync called");
         if (!IsQueryChanged() && cachedAstronomyData != null)
         {
+            await JS.InvokeVoidAsync(identifier: "console.log", "Using cached astronomy data");
             astronomyData = cachedAstronomyData;
             isLoadingAstronomyData = false;
             StateHasChanged();
@@ -1054,8 +1061,10 @@
         astronomyData = null;
         try
         {
+            await JS.InvokeVoidAsync(identifier: "console.log", $"Astronomy API key present: {!string.IsNullOrWhiteSpace(astronomyApiKey)}");
             if (string.IsNullOrWhiteSpace(astronomyApiKey))
             {
+                await JS.InvokeVoidAsync(identifier: "console.log", "ERROR: Astronomy API key is missing!");
                 LunarEclipseError = "Astronomy API key is missing. Please set your API key in the environment variables.";
                 ConstellationError = LunarEclipseError;
                 CometError = LunarEclipseError;
@@ -1069,10 +1078,13 @@
             string lat = userLatitude ?? string.Empty;
             string lon = userLongitude ?? string.Empty;
 
+            await JS.InvokeVoidAsync(identifier: "console.log", $"Lat: {lat}, Lon: {lon}");
+
             // Prefer lat/lon if available (from geolocation), else build location string
             if (!string.IsNullOrEmpty(lat) && !string.IsNullOrEmpty(lon))
             {
                 url = $"https://api.ipgeolocation.io/v2/astronomy?apiKey={astronomyApiKey}&lat={lat}&long={lon}";
+                await JS.InvokeVoidAsync(identifier: "console.log", $"Using lat/lon URL (API key hidden)");
             }
             else
             {
@@ -1124,12 +1136,15 @@
                 }
                 else
                 {
+                    await JS.InvokeVoidAsync(identifier: "console.log", "ERROR: No location data available");
                     isLoadingAstronomyData = false;
                     return;
                 }
             }
 
+            await JS.InvokeVoidAsync(identifier: "console.log", $"Fetching astronomy data from API...");
             HttpResponseMessage? response = await Http.GetAsync(url);
+            await JS.InvokeVoidAsync(identifier: "console.log", $"API Response Status: {response.StatusCode}");
             if (response.IsSuccessStatusCode)
             {
                 string? json = await response.Content.ReadAsStringAsync();
@@ -1141,12 +1156,15 @@
                 astronomyData = System.Text.Json.JsonSerializer.Deserialize<AstronomyData>(astronomyElem.GetRawText(), options: new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 cachedAstronomyData = astronomyData;
                 UpdateLastQuery();
+                await JS.InvokeVoidAsync(identifier: "console.log", $"Successfully deserialized astronomy data. Moon phase: {astronomyData?.MoonPhase}");
                 LunarEclipseError = string.Empty;
                 ConstellationError = string.Empty;
                 CometError = string.Empty;
             }
             else
             {
+                string errorBody = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync(identifier: "console.log", $"ERROR: API request failed. Status: {response.StatusCode}, Body: {errorBody}");
                 LunarEclipseError = "Failed to fetch astronomy data. Please check your API key and try again.";
                 ConstellationError = LunarEclipseError;
                 CometError = LunarEclipseError;
@@ -1154,6 +1172,8 @@
         }
         catch (Exception ex)
         {
+            await JS.InvokeVoidAsync(identifier: "console.log", $"ERROR in FetchAstronomyDataAsync: {ex.GetType().Name} - {ex.Message}");
+            await JS.InvokeVoidAsync(identifier: "console.log", $"Stack trace: {ex.StackTrace}");
             LunarEclipseError = $"Error: {ex.Message}";
             ConstellationError = $"Error: {ex.Message}";
             CometError = $"Error: {ex.Message}";
@@ -1171,19 +1191,34 @@
 
     async Task OnShareLocationClicked()
     {
+        await JS.InvokeVoidAsync(identifier: "console.log", "OnShareLocationClicked called from Blazor");
         if (JS != null)
         {
-            GeolocationResult? pos = await JS.InvokeAsync<GeolocationResult>(identifier: "getUserLocation");
-            if (pos != null)
+            try
             {
-                userLatitude = pos.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                userLongitude = pos.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                // Set country and timezone if available from geolocation
-                if (!string.IsNullOrWhiteSpace(pos.Country))
-                    selectedCountry = pos.Country;
-                if (!string.IsNullOrWhiteSpace(pos.Timezone))
-                    selectedTimezone = pos.Timezone;
-                await FetchAstronomyDataAsync();
+                await JS.InvokeVoidAsync(identifier: "console.log", "Calling getUserLocation...");
+                GeolocationResult? pos = await JS.InvokeAsync<GeolocationResult>(identifier: "getUserLocation");
+                await JS.InvokeVoidAsync(identifier: "console.log", $"getUserLocation returned: {(pos != null ? $"Lat={pos.Latitude}, Lon={pos.Longitude}" : "null")}");
+                if (pos != null)
+                {
+                    userLatitude = pos.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    userLongitude = pos.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    await JS.InvokeVoidAsync(identifier: "console.log", $"Set userLatitude={userLatitude}, userLongitude={userLongitude}");
+                    // Set country and timezone if available from geolocation
+                    if (!string.IsNullOrWhiteSpace(pos.Country))
+                        selectedCountry = pos.Country;
+                    if (!string.IsNullOrWhiteSpace(pos.Timezone))
+                        selectedTimezone = pos.Timezone;
+                    await FetchAstronomyDataAsync();
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync(identifier: "console.log", "Location was null - user may have denied permission or geolocation failed");
+                }
+            }
+            catch (Exception ex)
+            {
+                await JS.InvokeVoidAsync(identifier: "console.log", $"Error in OnShareLocationClicked: {ex.Message}");
             }
         }
     }
@@ -1216,8 +1251,6 @@
         }
         // For APOD, lat/lon are not required, so we just call the endpoint for the current date
         string? url = $"https://api.nasa.gov/planetary/apod?api_key={nasaApiKey}";
-        await JS.InvokeVoidAsync(identifier: "console.log", $"NASA API Key: {nasaApiKey}");
-        await JS.InvokeVoidAsync(identifier: "console.log", $"NASA APOD Request URL: {url}");
         try
         {
             HttpResponseMessage? response = await Http.GetAsync(url);
@@ -1232,7 +1265,7 @@
             }
             else
             {
-                NasaError = $"Failed to fetch NASA APOD data. Status: {response.StatusCode}";
+                NasaError = $"Currently, NASA APIs are experiencing an unscheduled outage. Users are advised to check back later for updates on the status of the APIs. data. Status: {response.StatusCode}";
             }
         }
         catch (Exception ex)

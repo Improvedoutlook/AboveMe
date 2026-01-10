@@ -37,6 +37,12 @@ jobs:
     - name: Publish
       run: dotnet publish --configuration Release --no-build --output publish
       
+    - name: Inject API keys into appsettings.json
+      run: |
+        # Replace DEMO_KEY values with actual API keys from GitHub Secrets
+        sed -i 's/"NasaApiKey": "DEMO_KEY"/"NasaApiKey": "${{ secrets.NASA_API_KEY }}"/g' publish/wwwroot/appsettings.json
+        sed -i 's/"AstronomyApiKey": "DEMO_KEY"/"AstronomyApiKey": "${{ secrets.ASTRONOMY_API_KEY }}"/g' publish/wwwroot/appsettings.json
+      
     - name: Change base-tag in index.html
       run: sed -i 's/<base href="\/" \/>/<base href="\/AboveMe\/" \/>/g' publish/wwwroot/index.html
       
