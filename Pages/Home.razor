@@ -401,10 +401,15 @@
 
     public class GeolocationResult
     {
+        [JsonPropertyName(name: "Latitude")]
         public double Latitude { get; set; }
+        [JsonPropertyName(name: "Longitude")]
         public double Longitude { get; set; }
+        [JsonPropertyName(name: "Country")]
         public string? Country { get; set; }
+        [JsonPropertyName(name: "City")]
         public string? City { get; set; }
+        [JsonPropertyName(name: "Timezone")]
         public string? Timezone { get; set; }
     }
 
@@ -1171,19 +1176,34 @@
 
     async Task OnShareLocationClicked()
     {
+        await JS.InvokeVoidAsync(identifier: "console.log", "OnShareLocationClicked called from Blazor");
         if (JS != null)
         {
-            GeolocationResult? pos = await JS.InvokeAsync<GeolocationResult>(identifier: "getUserLocation");
-            if (pos != null)
+            try
             {
-                userLatitude = pos.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                userLongitude = pos.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                // Set country and timezone if available from geolocation
-                if (!string.IsNullOrWhiteSpace(pos.Country))
-                    selectedCountry = pos.Country;
-                if (!string.IsNullOrWhiteSpace(pos.Timezone))
-                    selectedTimezone = pos.Timezone;
-                await FetchAstronomyDataAsync();
+                await JS.InvokeVoidAsync(identifier: "console.log", "Calling getUserLocation...");
+                GeolocationResult? pos = await JS.InvokeAsync<GeolocationResult>(identifier: "getUserLocation");
+                await JS.InvokeVoidAsync(identifier: "console.log", $"getUserLocation returned: {(pos != null ? $"Lat={pos.Latitude}, Lon={pos.Longitude}" : "null")}");
+                if (pos != null)
+                {
+                    userLatitude = pos.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    userLongitude = pos.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    await JS.InvokeVoidAsync(identifier: "console.log", $"Set userLatitude={userLatitude}, userLongitude={userLongitude}");
+                    // Set country and timezone if available from geolocation
+                    if (!string.IsNullOrWhiteSpace(pos.Country))
+                        selectedCountry = pos.Country;
+                    if (!string.IsNullOrWhiteSpace(pos.Timezone))
+                        selectedTimezone = pos.Timezone;
+                    await FetchAstronomyDataAsync();
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync(identifier: "console.log", "Location was null - user may have denied permission or geolocation failed");
+                }
+            }
+            catch (Exception ex)
+            {
+                await JS.InvokeVoidAsync(identifier: "console.log", $"Error in OnShareLocationClicked: {ex.Message}");
             }
         }
     }
