@@ -1048,8 +1048,10 @@
 
     async Task FetchAstronomyDataAsync()
     {
+        await JS.InvokeVoidAsync(identifier: "console.log", "FetchAstronomyDataAsync called");
         if (!IsQueryChanged() && cachedAstronomyData != null)
         {
+            await JS.InvokeVoidAsync(identifier: "console.log", "Using cached astronomy data");
             astronomyData = cachedAstronomyData;
             isLoadingAstronomyData = false;
             StateHasChanged();
@@ -1059,8 +1061,10 @@
         astronomyData = null;
         try
         {
+            await JS.InvokeVoidAsync(identifier: "console.log", $"Astronomy API key present: {!string.IsNullOrWhiteSpace(astronomyApiKey)}");
             if (string.IsNullOrWhiteSpace(astronomyApiKey))
             {
+                await JS.InvokeVoidAsync(identifier: "console.log", "ERROR: Astronomy API key is missing!");
                 LunarEclipseError = "Astronomy API key is missing. Please set your API key in the environment variables.";
                 ConstellationError = LunarEclipseError;
                 CometError = LunarEclipseError;
@@ -1074,10 +1078,13 @@
             string lat = userLatitude ?? string.Empty;
             string lon = userLongitude ?? string.Empty;
 
+            await JS.InvokeVoidAsync(identifier: "console.log", $"Lat: {lat}, Lon: {lon}");
+
             // Prefer lat/lon if available (from geolocation), else build location string
             if (!string.IsNullOrEmpty(lat) && !string.IsNullOrEmpty(lon))
             {
                 url = $"https://api.ipgeolocation.io/v2/astronomy?apiKey={astronomyApiKey}&lat={lat}&long={lon}";
+                await JS.InvokeVoidAsync(identifier: "console.log", $"Using lat/lon URL (API key hidden)");
             }
             else
             {
@@ -1129,12 +1136,15 @@
                 }
                 else
                 {
+                    await JS.InvokeVoidAsync(identifier: "console.log", "ERROR: No location data available");
                     isLoadingAstronomyData = false;
                     return;
                 }
             }
 
+            await JS.InvokeVoidAsync(identifier: "console.log", $"Fetching astronomy data from API...");
             HttpResponseMessage? response = await Http.GetAsync(url);
+            await JS.InvokeVoidAsync(identifier: "console.log", $"API Response Status: {response.StatusCode}");
             if (response.IsSuccessStatusCode)
             {
                 string? json = await response.Content.ReadAsStringAsync();
@@ -1146,12 +1156,15 @@
                 astronomyData = System.Text.Json.JsonSerializer.Deserialize<AstronomyData>(astronomyElem.GetRawText(), options: new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 cachedAstronomyData = astronomyData;
                 UpdateLastQuery();
+                await JS.InvokeVoidAsync(identifier: "console.log", $"Successfully deserialized astronomy data. Moon phase: {astronomyData?.MoonPhase}");
                 LunarEclipseError = string.Empty;
                 ConstellationError = string.Empty;
                 CometError = string.Empty;
             }
             else
             {
+                string errorBody = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync(identifier: "console.log", $"ERROR: API request failed. Status: {response.StatusCode}, Body: {errorBody}");
                 LunarEclipseError = "Failed to fetch astronomy data. Please check your API key and try again.";
                 ConstellationError = LunarEclipseError;
                 CometError = LunarEclipseError;
@@ -1159,6 +1172,8 @@
         }
         catch (Exception ex)
         {
+            await JS.InvokeVoidAsync(identifier: "console.log", $"ERROR in FetchAstronomyDataAsync: {ex.GetType().Name} - {ex.Message}");
+            await JS.InvokeVoidAsync(identifier: "console.log", $"Stack trace: {ex.StackTrace}");
             LunarEclipseError = $"Error: {ex.Message}";
             ConstellationError = $"Error: {ex.Message}";
             CometError = $"Error: {ex.Message}";
