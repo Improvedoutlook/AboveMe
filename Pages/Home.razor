@@ -3,11 +3,12 @@
 @using Microsoft.JSInterop
 @using System.Net.Http
 @using System.Text.Json.Serialization
+@using AboveMe.Services
 
 <div class="aboveme-form">
     <div class="form-group">
         <label for="country">Country</label>
-        <select id="country" class="form-control" @bind="selectedCountry">
+        <select id="country" class="form-control" @bind="selectedCountry" @bind:after="OnCountryChanged">
             <option value="">Select Country</option>
             @foreach (string country in Countries)
             {
@@ -17,7 +18,7 @@
     </div>
     <div class="form-group">
         <label for="timezone">Timezone</label>
-        <select id="timezone" class="form-control" @bind="selectedTimezone">
+        <select id="timezone" class="form-control" @bind="selectedTimezone" @bind:after="OnTimezoneChanged">
             <option value="">Select Timezone</option>
             @foreach ((string Id, string Display, string Description) tz in Timezones)
             {
@@ -29,7 +30,7 @@
         <label for="city">City</label>
         @if (Cities.Count > 0)
         {
-            <select id="city" class="form-control" @bind="selectedCity">
+            <select id="city" class="form-control" @bind="selectedCity" @bind:after="OnCityChanged">
                 <option value="">Select City</option>
                 @foreach (string city in Cities)
                 {
@@ -397,6 +398,7 @@
 
     [Inject] IJSRuntime JS { get; set; } = default!;
     [Inject] IConfiguration Configuration { get; set; } = default!;
+    [Inject] LocalStorageService LocalStorage { get; set; } = default!;
     @inject HttpClient Http
 
     public class GeolocationResult
@@ -622,6 +624,9 @@
         nasaApiKey = Configuration["ApiKeys:NasaApiKey"] ?? "DEMO_KEY";
         astronomyApiKey = Configuration["ApiKeys:AstronomyApiKey"] ?? "DEMO_KEY";
         ipGeoApiKey = Environment.GetEnvironmentVariable(variable: "IPGEO_API_KEY");
+
+        // Load saved user preferences from localStorage
+        await LoadUserPreferencesAsync();
 
         // Load random Webb Space Telescope image
         await LoadRandomWebbImageAsync();
@@ -1190,6 +1195,10 @@
                         selectedCountry = pos.Country;
                     if (!string.IsNullOrWhiteSpace(pos.Timezone))
                         selectedTimezone = pos.Timezone;
+                    
+                    // Save preferences to localStorage
+                    await SaveUserPreferencesAsync();
+                    
                     await FetchAstronomyDataAsync();
                 }
             }
@@ -1376,6 +1385,91 @@
                 currentShowerDisplayCount = 5; // Reset pagination
             }
         }
+    }
+
+    /// <summary>
+    /// Load user preferences from localStorage and apply them to the component state.
+    /// This allows preferences to persist across browser sessions.
+    /// </summary>
+    private async Task LoadUserPreferencesAsync()
+    {
+        try
+        {
+            var preferences = await LocalStorage.GetItemAsync<UserLocationPreferences>("userLocationPreferences");
+            if (preferences != null)
+            {
+                selectedCountry = preferences.Country ?? "";
+                selectedCity = preferences.City ?? "";
+                selectedTimezone = preferences.Timezone ?? "";
+                userLatitude = preferences.Latitude;
+                userLongitude = preferences.Longitude;
+                
+                // Update cached values to match loaded preferences
+                lastCountry = selectedCountry;
+                lastCity = selectedCity;
+                lastTimezone = selectedTimezone;
+                lastLatitude = userLatitude;
+                lastLongitude = userLongitude;
+                
+                Console.WriteLine($"Loaded user preferences: Country={selectedCountry}, City={selectedCity}, Timezone={selectedTimezone}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading user preferences: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Save current user preferences to localStorage for persistence across sessions.
+    /// </summary>
+    private async Task SaveUserPreferencesAsync()
+    {
+        try
+        {
+            var preferences = new UserLocationPreferences
+            {
+                Country = selectedCountry,
+                City = selectedCity,
+                Timezone = selectedTimezone,
+                Latitude = userLatitude,
+                Longitude = userLongitude,
+                LastUpdated = DateTime.UtcNow
+            };
+            
+            await LocalStorage.SetItemAsync("userLocationPreferences", preferences);
+            Console.WriteLine($"Saved user preferences: Country={selectedCountry}, City={selectedCity}, Timezone={selectedTimezone}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving user preferences: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Handle country dropdown change event.
+    /// </summary>
+    private async Task OnCountryChanged()
+    {
+        await SaveUserPreferencesAsync();
+        await OnParametersSetAsync();
+    }
+
+    /// <summary>
+    /// Handle timezone dropdown change event.
+    /// </summary>
+    private async Task OnTimezoneChanged()
+    {
+        await SaveUserPreferencesAsync();
+        await OnParametersSetAsync();
+    }
+
+    /// <summary>
+    /// Handle city dropdown change event.
+    /// </summary>
+    private async Task OnCityChanged()
+    {
+        await SaveUserPreferencesAsync();
     }
 
     /// <summary>

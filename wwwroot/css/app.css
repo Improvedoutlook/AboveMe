@@ -261,12 +261,120 @@ body {
 }
 .aboveme-form .btn-primary {
     width: 100%;
-    background: linear-gradient(90deg, #3a8dde 0%, #6c63ff 100%);
-    border: none;
+    background: rgba(108, 99, 255, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(108, 99, 255, 0.4);
     color: #fff;
     font-weight: 600;
-    border-radius: 6px;
-    box-shadow: 0 2px 8px #0002;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 
+                0 0 20px rgba(108, 99, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+    position: relative;
+    overflow: hidden;
+}
+
+.aboveme-form .btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.aboveme-form .btn-primary:hover {
+    background: rgba(108, 99, 255, 0.25);
+    border-color: rgba(108, 99, 255, 0.6);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 
+                0 0 30px rgba(108, 99, 255, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.aboveme-form .btn-primary:hover::before {
+    left: 100%;
+}
+
+.aboveme-form .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 
+                0 0 15px rgba(108, 99, 255, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Glassy button for outline variants */
+.btn-outline-primary {
+    background: rgba(58, 141, 222, 0.12);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(58, 141, 222, 0.4);
+    color: #fff;
+    font-weight: 500;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 
+                0 0 15px rgba(58, 141, 222, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: all 0.3s ease;
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+}
+
+.btn-outline-primary:hover {
+    background: rgba(58, 141, 222, 0.22);
+    border-color: rgba(58, 141, 222, 0.6);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), 
+                0 0 25px rgba(58, 141, 222, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    transform: translateY(-2px);
+}
+
+.btn-outline-primary:active {
+    transform: translateY(0);
+    background: rgba(58, 141, 222, 0.18);
+}
+
+/* Glassy button for light outline variants */
+.btn-outline-light {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #fff;
+    font-weight: 500;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 
+                0 0 15px rgba(255, 255, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transition: all 0.3s ease;
+}
+
+.btn-outline-light:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), 
+                0 0 25px rgba(255, 255, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.btn-outline-light:active {
+    transform: translateY(0);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* Small button styling (like the location share button) */
+.btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 1.2rem;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 .moon-phase-display .moon-img {
     filter: drop-shadow(0 0 16px #fff8);
