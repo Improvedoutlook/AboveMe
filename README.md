@@ -22,3 +22,7 @@ This project was bootstrapped with `dotnet new blazorwasm`.
 
 
 <a href="https://app.daily.dev/improvedoutlook"><img src="https://api.daily.dev/devcards/v2/a3jXrhNvqTvcDRfL6sXIV.png?type=default&r=zcw" width="356" alt="Mark Owens's Dev Card"/></a>
+
+## License
+
+License: MIT — see the LICENSE file for details.
