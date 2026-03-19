@@ -1,19 +1,23 @@
 // Starry background JS for AboveMe
+// Track last known width to avoid re-rendering on mobile address bar show/hide
+window._lastStarryWidth = 0;
+
 window.renderStars = function () {
     const starCount = 120;
     const container = document.getElementById('starry-bg');
     if (!container) return;
     container.innerHTML = '';
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    window._lastStarryWidth = window.innerWidth;
+    // Use percentage-based positioning so stars stay stable when
+    // mobile browsers resize the viewport height (address bar show/hide)
     for (let i = 0; i < starCount; i++) {
         const star = document.createElement('div');
         star.className = 'star';
         const size = Math.random() * 2 + 1;
         star.style.width = `${size}px`;
         star.style.height = `${size}px`;
-        star.style.top = `${Math.random() * h}px`;
-        star.style.left = `${Math.random() * w}px`;
+        star.style.top = `${Math.random() * 100}%`;
+        star.style.left = `${Math.random() * 100}%`;
         star.style.opacity = (0.6 + Math.random() * 0.4).toString();
         star.style.animationDuration = `${1.5 + Math.random() * 2}s`;
         container.appendChild(star);
@@ -52,12 +56,21 @@ window.renderStars = function () {
             window.addEventListener('resize', resizeCanvas);
         }
 
+        let lastCanvasWidth = 0;
         function resizeCanvas() {
-            width = window.innerWidth;
-            height = window.innerHeight;
-            if (canvas) {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight;
+            // Only resize canvas if width changed, to avoid jitter on
+            // mobile when address bar shows/hides (height-only change)
+            if (canvas && (lastCanvasWidth !== newWidth || !canvas.width)) {
+                width = newWidth;
+                height = newHeight;
                 canvas.width = width;
                 canvas.height = height;
+                lastCanvasWidth = newWidth;
+            } else {
+                // Still update the logical height for spawning positions
+                height = newHeight;
             }
         }
 
@@ -133,8 +146,11 @@ window.renderStars = function () {
     })();
 };
 
+// Only re-render stars when viewport width actually changes.
+// Mobile browsers fire resize events when the address bar shows/hides
+// (height-only change), which would scatter stars with new random positions.
 window.addEventListener('resize', () => {
-    if (document.getElementById('starry-bg')) {
+    if (document.getElementById('starry-bg') && window.innerWidth !== window._lastStarryWidth) {
         window.renderStars();
     }
 });

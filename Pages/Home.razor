@@ -28,20 +28,7 @@
     </div>
     <div class="form-group">
         <label for="city">City</label>
-        @if (Cities.Count > 0)
-        {
-            <select id="city" class="form-control" @bind="selectedCity" @bind:after="OnCityChanged">
-                <option value="">Select City</option>
-                @foreach (string city in Cities)
-                {
-                    <option value="@city">@city</option>
-                }
-            </select>
-        }
-        else
-        {
-            <input id="city" class="form-control" type="text" @bind="selectedCity" placeholder="Enter your city" />
-        }
+        <input id="city" class="form-control" type="text" @bind="selectedCity" @bind:after="OnCityChanged" placeholder="Enter your city" />
     </div>
 
 
@@ -886,13 +873,13 @@
         DateTime next = eclipses.FirstOrDefault(d => d > now);
         if (next != default)
         {
-            return $"Next visible lunar eclipse: {next:dd/MM/yyyy}";
+            return $"Next visible lunar eclipse: {next:MM/dd/yyyy}";
         }
         // If no future eclipse, show last past one
         DateTime last = eclipses.LastOrDefault(d => d <= now);
         if (last != default)
         {
-            return $"Last visible lunar eclipse: {last:dd/MM/yyyy}";
+            return $"Last visible lunar eclipse: {last:MM/dd/yyyy}";
         }
         return "No lunar eclipse data available.";
     }
@@ -1022,7 +1009,7 @@
                     new CometInfo(name: "Comet Encke", nextDate: "10/17/2026")
                 },
                 "Australian Eastern Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet McNaught", nextDate: "01/014/2026")
+                    new CometInfo(name: "Comet McNaught", nextDate: "01/14/2026")
                 },
                 "China Standard Time" => new List<CometInfo>() {
                     new CometInfo(name: "Comet Ikeya–Zhang", nextDate: "01/04/2030")
