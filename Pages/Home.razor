@@ -136,16 +136,40 @@
                     else if (nasaData.MediaType == "video")
                     {
                         <div style="max-width:100%; margin-bottom:1em;">
-                            <iframe src="@nasaData.Url" 
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                                    allowfullscreen="allowfullscreen"
-                                    style="width:100%; height:500px; border:0; border-radius:8px;">
-                            </iframe>
+                            @if (IsDirectVideoUrl(nasaData.Url))
+                            {
+                                <video controls style="width:100%; height:auto; border-radius:8px; background:#000;" poster="@nasaData.HdUrl">
+                                    <source src="@nasaData.Url" type="@GetVideoMimeType(nasaData.Url)" />
+                                    Your browser does not support the video tag. <a href="@nasaData.Url" target="_blank" rel="noopener noreferrer">Open video</a>
+                                </video>
+                            }
+                            else if (!string.IsNullOrEmpty(GetYouTubeEmbedUrl(nasaData.Url)))
+                            {
+                                <iframe src="@GetYouTubeEmbedUrl(nasaData.Url)" 
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                        allowfullscreen
+                                        style="width:100%; height:500px; border:0; border-radius:8px;">
+                                </iframe>
+                            }
+                            else
+                            {
+                                <!-- Some external video hosts block framing via X-Frame-Options. Provide iframe + fallback link. -->
+                                <iframe src="@nasaData.Url" 
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                        allowfullscreen
+                                        style="width:100%; height:500px; border:0; border-radius:8px;">
+                                </iframe>
+                                <div style="margin-top:0.5em;"><a href="@nasaData.Url" target="_blank" rel="noopener noreferrer" style="color:#9cf;">Open video in new tab</a></div>
+                            }
                         </div>
                     }
                 }
-                <div style="color:#fff; font-weight:bold; font-size:1.1em;">@nasaData.Title</div>
-                <div style="color:#fff; margin-top:0.5em;">@nasaData.Explanation</div>
+                <div style="max-width:920px; margin:0 auto 1.2em; padding:0 1rem;">
+                    <div style="color:#fff; font-weight:bold; font-size:1.25em; margin-bottom:0.6em; text-align:center;">@nasaData.Title</div>
+                    <div style="color:#ddd; font-size:1rem; line-height:1.6; text-align:left; max-width:800px; margin:0 auto;">
+                        @nasaData.Explanation
+                    </div>
+                </div>
             }
         </div>
     }
@@ -490,79 +514,79 @@
     // Hardcoded meteor shower data from American Meteor Society 2025-2026 calendar
     private static readonly List<MeteorShowerData> AllMeteorShowers = new()
     {
-        new("Quadrantids", new DateTime(2025, 12, 28), new DateTime(2026, 1, 12), new DateTime(2026, 1, 3), new TimeSpan(21, 0, 0), 
-            "The Quadrantids are one of the best annual meteor showers with a ZHR of around 120 under ideal conditions. The shower is known for its bright fireball meteors. Best viewing is in the Northern Hemisphere.",
-            HemisphereVisibility.NorthernHemisphereOnly, "Boötes", 120, "41 km/s", "Asteroid 2003 EH1", 75),
-        new("Lyrids", new DateTime(2025, 4, 16), new DateTime(2025, 4, 25), new DateTime(2025, 4, 22), new TimeSpan(22, 0, 0),
-            "The Lyrids are one of the oldest known meteor showers, observed for 2,700 years. They produce about 18 meteors per hour at peak. Best viewing is in the Northern Hemisphere during pre-dawn hours.",
+        new MeteorShowerData(name: "Quadrantids", activeStart: new DateTime(year: 2025, month: 12, day: 28), activeEnd: new DateTime(year: 2026, month: 1, day: 12), peakDateUTC: new DateTime(year: 2026, month: 1, day: 3), peakTimeUTC: new TimeSpan(hours: 21, minutes: 0, seconds: 0), 
+            description: "The Quadrantids are one of the best annual meteor showers with a ZHR of around 120 under ideal conditions. The shower is known for its bright fireball meteors. Best viewing is in the Northern Hemisphere.",
+            HemisphereVisibility.NorthernHemisphereOnly, radiant: "Boötes", zhr: 120, velocity: "41 km/s", parentObject: "Asteroid 2003 EH1", moonIllumination: 75),
+        new MeteorShowerData(name: "Lyrids", new DateTime(2025, 4, 16), new DateTime(2025, 4, 25), new DateTime(2025, 4, 22), new TimeSpan(22, 0, 0),
+            description: "The Lyrids are one of the oldest known meteor showers, observed for 2,700 years. They produce about 18 meteors per hour at peak. Best viewing is in the Northern Hemisphere during pre-dawn hours.",
             HemisphereVisibility.NorthernHemisphereOnly, "Lyra", 18, "49 km/s", "Comet C/1861 G1 Thatcher", 15),
-        new("Eta Aquarids", new DateTime(2025, 4, 19), new DateTime(2025, 5, 28), new DateTime(2025, 5, 6), new TimeSpan(3, 0, 0),
+        new MeteorShowerData("Eta Aquarids", new DateTime(2025, 4, 19), new DateTime(2025, 5, 28), new DateTime(2025, 5, 6), new TimeSpan(3, 0, 0),
             "The Eta Aquarids are one of two meteor showers created by debris from Halley's Comet. They produce about 60 meteors per hour in the Southern Hemisphere and 30 per hour in the Northern Hemisphere. Best viewing is in the Southern Hemisphere.",
             HemisphereVisibility.All, "Aquarius", 60, "66 km/s", "Comet 1P/Halley", 55),
-        new("Perseids", new DateTime(2025, 7, 17), new DateTime(2025, 8, 24), new DateTime(2025, 8, 12), new TimeSpan(21, 0, 0),
+        new MeteorShowerData("Perseids", new DateTime(2025, 7, 17), new DateTime(2025, 8, 24), new DateTime(2025, 8, 12), new TimeSpan(21, 0, 0),
             "The Perseids are the most popular meteor shower as they peak on warm August nights in the Northern Hemisphere. They produce up to 100 meteors per hour at peak, with bright and numerous meteors. Best viewing is in the Northern Hemisphere.",
             HemisphereVisibility.NorthernHemisphereOnly, "Perseus", 100, "59 km/s", "Comet 109P/Swift-Tuttle", 30),
-        new("Orionids", new DateTime(2025, 10, 2), new DateTime(2025, 11, 7), new DateTime(2025, 10, 21), new TimeSpan(2, 0, 0),
+        new MeteorShowerData("Orionids", new DateTime(2025, 10, 2), new DateTime(2025, 11, 7), new DateTime(2025, 10, 21), new TimeSpan(2, 0, 0),
             "The Orionids are the second meteor shower created by debris from Halley's Comet. They produce about 20 meteors per hour at peak. The shower is visible from both hemispheres.",
             HemisphereVisibility.All, "Orion", 20, "66 km/s", "Comet 1P/Halley", 85),
-        new("Leonids", new DateTime(2025, 11, 6), new DateTime(2025, 11, 30), new DateTime(2025, 11, 17), new TimeSpan(0, 0, 0),
+        new MeteorShowerData("Leonids", new DateTime(2025, 11, 6), new DateTime(2025, 11, 30), new DateTime(2025, 11, 17), new TimeSpan(0, 0, 0),
             "The Leonids are known for their spectacular meteor storms every 33 years. In normal years they produce about 15 meteors per hour. Best viewing is in the Northern Hemisphere during pre-dawn hours.",
             HemisphereVisibility.NorthernHemisphereOnly, "Leo", 15, "71 km/s", "Comet 55P/Tempel-Tuttle", 90),
-        new("Geminids", new DateTime(2025, 12, 7), new DateTime(2025, 12, 17), new DateTime(2025, 12, 14), new TimeSpan(2, 0, 0),
+        new MeteorShowerData("Geminids", new DateTime(2025, 12, 7), new DateTime(2025, 12, 17), new DateTime(2025, 12, 14), new TimeSpan(2, 0, 0),
             "The Geminids are considered the best meteor shower of the year, producing up to 120 multi-colored meteors per hour at peak. Unlike most showers, the Geminids originate from an asteroid rather than a comet. Visible from both hemispheres.",
-            HemisphereVisibility.All, "Gemini", 120, "35 km/s", "Asteroid 3200 Phaethon", 95),
-        new("Ursids", new DateTime(2025, 12, 17), new DateTime(2025, 12, 26), new DateTime(2025, 12, 22), new TimeSpan(8, 0, 0),
+            HemisphereVisibility.All, radiant: "Gemini", 120, "35 km/s", "Asteroid 3200 Phaethon", 95),
+        new MeteorShowerData("Ursids", new DateTime(2025, 12, 17), new DateTime(2025, 12, 26), new DateTime(2025, 12, 22), new TimeSpan(8, 0, 0),
             "The Ursids are a modest shower producing about 10 meteors per hour. They are visible primarily in the Northern Hemisphere and peak just before Christmas.",
             HemisphereVisibility.NorthernHemisphereOnly, "Ursa Minor", 10, "33 km/s", "Comet 8P/Tuttle", 10),
-        new("Quadrantids", new DateTime(2026, 12, 28), new DateTime(2027, 1, 12), new DateTime(2027, 1, 4), new TimeSpan(3, 0, 0),
+        new MeteorShowerData("Quadrantids", new DateTime(2026, 12, 28), new DateTime(2027, 1, 12), new DateTime(2027, 1, 4), new TimeSpan(3, 0, 0),
             "The Quadrantids return in 2027 with another spectacular show. One of the best annual meteor showers with bright fireball meteors. Best viewing is in the Northern Hemisphere.",
             HemisphereVisibility.NorthernHemisphereOnly, "Boötes", 120, "41 km/s", "Asteroid 2003 EH1", 20),
         // 2026 Meteor Showers
-        new("Lyrids", new DateTime(2026, 4, 16), new DateTime(2026, 4, 25), new DateTime(2026, 4, 22), new TimeSpan(22, 0, 0),
+        new MeteorShowerData(name: "Lyrids", activeStart: new DateTime(2026, 4, 16), new DateTime(2026, 4, 25), new DateTime(2026, 4, 22), new TimeSpan(22, 0, 0),
             "The Lyrids return in 2026, one of the oldest known meteor showers observed for 2,700 years. They produce about 18 meteors per hour at peak. Best viewing is in the Northern Hemisphere during pre-dawn hours.",
-            HemisphereVisibility.NorthernHemisphereOnly, "Lyra", 18, "49 km/s", "Comet C/1861 G1 Thatcher", 20),
-        new("Eta Aquarids", new DateTime(2026, 4, 19), new DateTime(2026, 5, 28), new DateTime(2026, 5, 6), new TimeSpan(3, 0, 0),
+            HemisphereVisibility.NorthernHemisphereOnly, "Lyra", zhr: 18, velocity: "49 km/s", parentObject: "Comet C/1861 G1 Thatcher", moonIllumination: 20),
+        new MeteorShowerData("Eta Aquarids", new DateTime(2026, 4, 19), new DateTime(2026, 5, 28), new DateTime(2026, 5, 6), new TimeSpan(3, 0, 0),
             "The Eta Aquarids in 2026, created by debris from Halley's Comet. They produce about 60 meteors per hour in the Southern Hemisphere and 30 per hour in the Northern Hemisphere.",
             HemisphereVisibility.All, "Aquarius", 60, "66 km/s", "Comet 1P/Halley", 60),
-        new("Alpha Capricornids", new DateTime(2026, 7, 3), new DateTime(2026, 8, 15), new DateTime(2026, 7, 30), new TimeSpan(23, 0, 0),
+        new MeteorShowerData("Alpha Capricornids", new DateTime(2026, 7, 3), new DateTime(2026, 8, 15), new DateTime(2026, 7, 30), new TimeSpan(23, 0, 0),
             "The Alpha Capricornids return in 2026. Not particularly strong, with a ZHR of only 5, but they are known for producing bright fireballs. Visible from both hemispheres.",
             HemisphereVisibility.All, "Capricornus", 5, "23 km/s", "Comet 169P/NEAT", 45),
-        new("Delta Aquarids", new DateTime(2026, 7, 12), new DateTime(2026, 8, 23), new DateTime(2026, 7, 30), new TimeSpan(2, 0, 0),
+        new MeteorShowerData("Delta Aquarids", new DateTime(2026, 7, 12), new DateTime(2026, 8, 23), new DateTime(2026, 7, 30), new TimeSpan(2, 0, 0),
             "The Delta Aquarids in 2026 produce about 20 meteors per hour and are best seen from the Southern Hemisphere. They often overlap with the Alpha Capricornids.",
             HemisphereVisibility.SouthernHemisphereOnly, "Aquarius", 20, "41 km/s", "Comet 96P/Machholz", 45),
-        new("Perseids", new DateTime(2026, 7, 17), new DateTime(2026, 8, 24), new DateTime(2026, 8, 12), new TimeSpan(21, 0, 0),
+        new MeteorShowerData("Perseids", new DateTime(2026, 7, 17), new DateTime(2026, 8, 24), new DateTime(2026, 8, 12), new TimeSpan(21, 0, 0),
             "The Perseids return in 2026, the most popular meteor shower as they peak on warm August nights. They produce up to 100 meteors per hour at peak, with bright and numerous meteors.",
             HemisphereVisibility.NorthernHemisphereOnly, "Perseus", 100, "59 km/s", "Comet 109P/Swift-Tuttle", 35),
-        new("Taurids (South)", new DateTime(2026, 9, 10), new DateTime(2026, 11, 20), new DateTime(2026, 10, 10), new TimeSpan(0, 0, 0),
+        new MeteorShowerData("Taurids (South)", new DateTime(2026, 9, 10), new DateTime(2026, 11, 20), new DateTime(2026, 10, 10), new TimeSpan(0, 0, 0),
             "The Southern Taurids in 2026 are a long-lasting shower known for producing bright fireballs. They have a low rate of 5 meteors per hour but are visible from both hemispheres.",
             HemisphereVisibility.All, "Taurus", 5, "27 km/s", "Comet 2P/Encke", 80),
-        new("Orionids", new DateTime(2026, 10, 2), new DateTime(2026, 11, 7), new DateTime(2026, 10, 21), new TimeSpan(2, 0, 0),
+        new MeteorShowerData("Orionids", new DateTime(2026, 10, 2), new DateTime(2026, 11, 7), new DateTime(2026, 10, 21), new TimeSpan(2, 0, 0),
             "The Orionids return in 2026, the second meteor shower created by debris from Halley's Comet. They produce about 20 meteors per hour at peak. The shower is visible from both hemispheres.",
             HemisphereVisibility.All, "Orion", 20, "66 km/s", "Comet 1P/Halley", 90),
-        new("Taurids (North)", new DateTime(2026, 10, 20), new DateTime(2026, 12, 10), new DateTime(2026, 11, 12), new TimeSpan(0, 0, 0),
+        new MeteorShowerData("Taurids (North)", new DateTime(2026, 10, 20), new DateTime(2026, 12, 10), new DateTime(2026, 11, 12), new TimeSpan(0, 0, 0),
             "The Northern Taurids in 2026 complement the Southern Taurids with a similar profile - low rate but bright fireballs. Visible from both hemispheres.",
             HemisphereVisibility.All, "Taurus", 5, "29 km/s", "Comet 2P/Encke", 95),
         new("Leonids", new DateTime(2026, 11, 6), new DateTime(2026, 11, 30), new DateTime(2026, 11, 17), new TimeSpan(0, 0, 0),
             "The Leonids in 2026 are known for their spectacular meteor storms every 33 years. In normal years they produce about 15 meteors per hour. Best viewing is in the Northern Hemisphere.",
             HemisphereVisibility.NorthernHemisphereOnly, "Leo", 15, "71 km/s", "Comet 55P/Tempel-Tuttle", 95),
-        new("Geminids", new DateTime(2026, 12, 7), new DateTime(2026, 12, 17), new DateTime(2026, 12, 14), new TimeSpan(2, 0, 0),
+        new MeteorShowerData("Geminids", new DateTime(2026, 12, 7), new DateTime(2026, 12, 17), new DateTime(2026, 12, 14), new TimeSpan(2, 0, 0),
             "The Geminids in 2026 are considered the best meteor shower of the year, producing up to 120 multi-colored meteors per hour at peak. Visible from both hemispheres.",
             HemisphereVisibility.All, "Gemini", 120, "35 km/s", "Asteroid 3200 Phaethon", 10),
-        new("Ursids", new DateTime(2026, 12, 17), new DateTime(2026, 12, 26), new DateTime(2026, 12, 22), new TimeSpan(8, 0, 0),
+        new MeteorShowerData("Ursids", new DateTime(2026, 12, 17), new DateTime(2026, 12, 26), new DateTime(2026, 12, 22), new TimeSpan(8, 0, 0),
             "The Ursids in 2026 are a modest shower producing about 10 meteors per hour. They are visible primarily in the Northern Hemisphere and peak just before Christmas.",
             HemisphereVisibility.NorthernHemisphereOnly, "Ursa Minor", 10, "33 km/s", "Comet 8P/Tuttle", 15),
-        new("Alpha Capricornids", new DateTime(2025, 7, 3), new DateTime(2025, 8, 15), new DateTime(2025, 7, 30), new TimeSpan(23, 0, 0),
+        new MeteorShowerData("Alpha Capricornids", new DateTime(2025, 7, 3), new DateTime(2025, 8, 15), new DateTime(2025, 7, 30), new TimeSpan(23, 0, 0),
             "The Alpha Capricornids are not particularly strong, with a ZHR of only 5, but they are known for producing bright fireballs. Visible from both hemispheres.",
             HemisphereVisibility.All, "Capricornus", 5, "23 km/s", "Comet 169P/NEAT", 40),
-        new("Delta Aquarids", new DateTime(2025, 7, 12), new DateTime(2025, 8, 23), new DateTime(2025, 7, 30), new TimeSpan(2, 0, 0),
+        new MeteorShowerData("Delta Aquarids", new DateTime(2025, 7, 12), new DateTime(2025, 8, 23), new DateTime(2025, 7, 30), new TimeSpan(2, 0, 0),
             "The Delta Aquarids produce about 20 meteors per hour and are best seen from the Southern Hemisphere. They often overlap with the Alpha Capricornids.",
             HemisphereVisibility.SouthernHemisphereOnly, "Aquarius", 20, "41 km/s", "Comet 96P/Machholz", 40),
-        new("Taurids (South)", new DateTime(2025, 9, 10), new DateTime(2025, 11, 20), new DateTime(2025, 10, 10), new TimeSpan(0, 0, 0),
+        new MeteorShowerData("Taurids (South)", new DateTime(2025, 9, 10), new DateTime(2025, 11, 20), new DateTime(2025, 10, 10), new TimeSpan(0, 0, 0),
             "The Southern Taurids are a long-lasting shower known for producing bright fireballs. They have a low rate of 5 meteors per hour but are visible from both hemispheres.",
             HemisphereVisibility.All, "Taurus", 5, "27 km/s", "Comet 2P/Encke", 75),
-        new("Taurids (North)", new DateTime(2025, 10, 20), new DateTime(2025, 12, 10), new DateTime(2025, 11, 12), new TimeSpan(0, 0, 0),
+        new MeteorShowerData("Taurids (North)", activeStart: new DateTime(year: 2025, month: 10, day: 20), activeEnd: new DateTime(year: 2025, month: 12, day: 10), peakDateUTC: new DateTime(year: 2025, month: 11, day: 12), peakTimeUTC: new TimeSpan(hours: 0, minutes: 0, seconds: 0),
             "The Northern Taurids complement the Southern Taurids with a similar profile - low rate but bright fireballs. Visible from both hemispheres.",
-            HemisphereVisibility.All, "Taurus", 5, "29 km/s", "Comet 2P/Encke", 90)
+            HemisphereVisibility.All, radiant: "Taurus", zhr: 5, velocity: "29 km/s", parentObject: "Comet 2P/Encke", moonIllumination: 90)
     };
 
     public class NasaApodData
@@ -1243,6 +1267,63 @@
         catch (Exception ex)
         {
             NasaError = $"Error: {ex.Message}";
+        }
+    }
+
+    // Helpers for APOD media handling
+    private bool IsDirectVideoUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        string u = url.Trim().ToLowerInvariant();
+        return u.EndsWith(".mp4") || u.EndsWith(".webm") || u.EndsWith(".ogg") || u.EndsWith(".ogv") || u.EndsWith(".mov") || u.EndsWith(".m4v");
+    }
+
+    private string GetVideoMimeType(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return "video/mp4";
+        string u = url.Trim().ToLowerInvariant();
+        if (u.EndsWith(".webm")) return "video/webm";
+        if (u.EndsWith(".ogg") || u.EndsWith(".ogv")) return "video/ogg";
+        if (u.EndsWith(".mov") || u.EndsWith(".m4v")) return "video/quicktime";
+        return "video/mp4";
+    }
+
+    private string? GetYouTubeEmbedUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return null;
+        try
+        {
+            var u = new Uri(url);
+            string lower = u.Host.ToLowerInvariant();
+            string id = string.Empty;
+            if (lower.Contains("youtu.be"))
+            {
+                id = u.AbsolutePath.Trim('/');
+            }
+            else if (lower.Contains("youtube.com"))
+            {
+                if (u.AbsolutePath.Contains("/embed/"))
+                {
+                    id = u.AbsolutePath.Split("/embed/")[1].Split('?')[0];
+                }
+                else
+                {
+                    // Parse query for v=
+                    var q = u.Query ?? string.Empty;
+                    var m = System.Text.RegularExpressions.Regex.Match(q, "[&?]v=([^&]+)");
+                    if (m.Success)
+                    {
+                        id = m.Groups[1].Value;
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(id)) return null;
+            return $"https://www.youtube.com/embed/{id}?rel=0&modestbranding=1&playsinline=1";
+        }
+        catch
+        {
+            return null;
         }
     }
 
