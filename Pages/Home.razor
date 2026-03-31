@@ -367,7 +367,52 @@
             "Webb Space Telescope Images/Descriptions/14.Looking Beyond the Veil.txt"),
         new(15, "NGC 4254 (Webb Image)", 
             "Webb Space Telescope Images/15.NGC 4254 (Webb Image).jpeg", 
-            "Webb Space Telescope Images/Descriptions/15.NGC 4254 (Webb Image).txt")
+            "Webb Space Telescope Images/Descriptions/15.NGC 4254 (Webb Image).txt"),
+        new(16, "Webb Sheds Light on an Exploded Star", 
+            "Webb Space Telescope Images/16.Webb Sheds Light on an Exploded Star.jpeg", 
+            "Webb Space Telescope Images/Descriptions/16.Webb Sheds Light on an Exploded Star.txt"),
+        new(17, "Seeing Sagittarius C in a New Light", 
+            "Webb Space Telescope Images/17.Seeing Sagittarius C in a New Light.jpeg", 
+            "Webb Space Telescope Images/Descriptions/17.Seeing Sagittarius C in a New Light.txt"),
+        new(18, "Details from Webb’s Cameras Reveal Crabby Composition", 
+            "Webb Space Telescope Images/18.Details from Webb’s Cameras Reveal Crabby Composition.jpeg", 
+            "Webb Space Telescope Images/Descriptions/18.Details from Webb’s Cameras Reveal Crabby Composition.txt"),
+        new(19, "Webb captures detailed beauty of Ring Nebula (MIRI image)", 
+            "Webb Space Telescope Images/19.Webb captures detailed beauty of Ring Nebula (MIRI image).jpeg", 
+            "Webb Space Telescope Images/Descriptions/19.Webb captures detailed beauty of Ring Nebula (MIRI image).txt"),
+        new(20, "Webb captures detailed beauty of Ring Nebula (NIRCam image)", 
+            "Webb Space Telescope Images/20.Webb captures detailed beauty of Ring Nebula (NIRCam image).jpeg", 
+            "Webb Space Telescope Images/Descriptions/20.Webb captures detailed beauty of Ring Nebula (NIRCam image).txt"),
+        new(21, "NGC 1433 (MIRI Image)", 
+            "Webb Space Telescope Images/21.NGC 1433 (MIRI Image).jpeg", 
+            "Webb Space Telescope Images/Descriptions/21.NGC 1433 (MIRI Image).txt"),
+        new(22, "Star cluster NGC 346", 
+            "Webb Space Telescope Images/22.Star cluster NGC 346.jpeg", 
+            "Webb Space Telescope Images/Descriptions/22.Star cluster NGC 346.txt"),
+        new(23, "Detail of the globular cluster M92", 
+            "Webb Space Telescope Images/23.Detail of the globular cluster M92.jpeg", 
+            "Webb Space Telescope Images/Descriptions/23.Detail of the globular cluster M92.txt"),
+        new(24, "Webb Unveils Dark Side", 
+            "Webb Space Telescope Images/24.Webb Unveils Dark Side.jpeg", 
+            "Webb Space Telescope Images/Descriptions/24.Webb Unveils Dark Side.txt"),
+        new(25, "M16 (Eagle Nebula)", 
+            "Webb Space Telescope Images/25.M16 (Eagle Nebula).jpeg", 
+            "Webb Space Telescope Images/Descriptions/25.M16 (Eagle Nebula).txt"),
+        new(26, "Multiwavelength View of Sagittarius A", 
+            "Webb Space Telescope Images/26.Multiwavelength View of Sagittarius A.jpeg", 
+            "Webb Space Telescope Images/Descriptions/26.Multiwavelength View of Sagittarius A.txt"),
+        new(27, "The Enduring Stellar Lifecycle in 30 Doradus", 
+            "Webb Space Telescope Images/27.The Enduring Stellar Lifecycle in 30 Doradus.jpeg", 
+            "Webb Space Telescope Images/Descriptions/27.The Enduring Stellar Lifecycle in 30 Doradus.txt"),
+        new(28, "Starry Wreath in Pegasus", 
+            "Webb Space Telescope Images/28.Starry Wreath in Pegasus.jpeg", 
+            "Webb Space Telescope Images/Descriptions/28.Starry Wreath in Pegasus.txt"),
+        new(29, "Webb Uncovers Young Stars’ Outbursts in Carina Nebula", 
+            "Webb Space Telescope Images/29.Webb Uncovers Young Stars’ Outbursts in Carina Nebula.jpeg", 
+            "Webb Space Telescope Images/Descriptions/29.Webb Uncovers Young Stars’ Outbursts in Carina Nebula.txt"),
+        new(30, "Neptune’s rings", 
+            "Webb Space Telescope Images/30.Neptune’s rings.jpeg", 
+            "Webb Space Telescope Images/Descriptions/30.Neptune’s rings.txt")
     };
 
     private string? selectedCountry;
@@ -618,6 +663,7 @@
     private string selectedImagePath = string.Empty;
     private string selectedTitle = string.Empty;
     private string selectedDescription = string.Empty;
+    private int lastWebbNumber = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -650,12 +696,13 @@
     {
         try
         {
-            // Select random image (1-15)
-            int randomNumber = Random.Shared.Next(1, 16);
+            // Select random image (1-30)
+            int randomNumber = Random.Shared.Next(1, 31);
             var selectedImage = WebbImages.First(img => img.Number == randomNumber);
             
             selectedImagePath = selectedImage.ImagePath;
             selectedTitle = selectedImage.Title;
+            lastWebbNumber = selectedImage.Number;
 
             // Fetch description from text file
             try
@@ -972,11 +1019,12 @@
 
     List<CometInfo> GetNextComets(string? country, string? timezone)
     {
-        // Example: Map by country/timezone. In a real app, use astronomy APIs or data.
-        // Expanded reputable comet data for major countries and timezones
+        // Build candidate list based on country/timezone; then filter to future-only dates.
+        var candidates = new List<CometInfo>();
+
         if (!string.IsNullOrEmpty(country))
         {
-            return country switch
+            candidates = country switch
             {
                 "United States" => new List<CometInfo>() {
                     new CometInfo(name: "Comet Halley", nextDate: "07/28/2061"),
@@ -1000,7 +1048,6 @@
                     new CometInfo(name: "Comet Halley", nextDate: "07/28/2061")
                 },
                 _ => new List<CometInfo>() {
-                    // Famous comets visible globally as fallback
                     new CometInfo(name: "Comet Halley", nextDate: "07/28/2061"),
                     new CometInfo(name: "Comet Encke", nextDate: "10/17/2026"),
                     new CometInfo(name: "Comet NEOWISE", nextDate: "03/15/2027"),
@@ -1010,7 +1057,7 @@
         }
         else if (!string.IsNullOrEmpty(timezone))
         {
-            return timezone switch
+            candidates = timezone switch
             {
                 "Eastern Standard Time" => new List<CometInfo>() {
                     new CometInfo(name: "Comet Halley", nextDate: "07/28/2061"),
@@ -1024,7 +1071,8 @@
                     new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
                 },
                 "Pacific Standard Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet NEOWISE", nextDate: "03/015/2027")
+                    // fixed formatting error
+                    new CometInfo(name: "Comet NEOWISE", nextDate: "03/15/2027")
                 },
                 "Greenwich Mean Time" => new List<CometInfo>() {
                     new CometInfo(name: "Comet Halley", nextDate: "07/28/2061")
@@ -1048,18 +1096,22 @@
         }
         else if (!string.IsNullOrEmpty(userLatitude) && !string.IsNullOrEmpty(userLongitude))
         {
-            // If location is shared, use a global list as fallback (real app: use astronomy API)
-            return new List<CometInfo>() {
+            candidates = new List<CometInfo>() {
                 new CometInfo(name: "Comet Halley", nextDate: "07/28/2061"),
                 new CometInfo(name: "Comet Encke", nextDate: "10/17/2026"),
                 new CometInfo(name: "Comet NEOWISE", nextDate: "03/15/2027"),
                 new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
             };
         }
-        else
-        {
-            return new List<CometInfo>();
-        }
+
+        // Filter candidates to only future dates (dates strictly after today).
+        var now = DateTime.UtcNow.Date;
+        var future = candidates
+            .Where(c => DateTime.TryParse(c.NextDate, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d) && d.Date > now)
+            .OrderBy(c => DateTime.Parse(c.NextDate, System.Globalization.CultureInfo.InvariantCulture))
+            .ToList();
+
+        return future;
     }
 
     async Task FetchAstronomyDataAsync()
@@ -1327,9 +1379,60 @@
         }
     }
 
-    void ToggleWebb()
+    async Task ToggleWebb()
     {
         showWebb = !showWebb;
+        if (showWebb)
+        {
+            // Prefer a deterministic "different" image: advance to the next image in the list.
+            await LoadNextWebbImageAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadNextWebbImageAsync()
+    {
+        try
+        {
+            int nextNumber;
+            if (lastWebbNumber <= 0)
+            {
+                // No previous image — pick a random one from 1..30
+                nextNumber = Random.Shared.Next(1, 31);
+            }
+            else
+            {
+                int currentIndex = WebbImages.FindIndex(w => w.Number == lastWebbNumber);
+                if (currentIndex >= 0)
+                {
+                    nextNumber = WebbImages[(currentIndex + 1) % WebbImages.Count].Number;
+                }
+                else
+                {
+                    nextNumber = Random.Shared.Next(1, 31);
+                }
+            }
+
+            var selectedImage = WebbImages.First(img => img.Number == nextNumber);
+            selectedImagePath = selectedImage.ImagePath;
+            selectedTitle = selectedImage.Title;
+            lastWebbNumber = selectedImage.Number;
+
+            try
+            {
+                selectedDescription = await Http.GetStringAsync(selectedImage.DescriptionPath);
+            }
+            catch
+            {
+                selectedDescription = "Description unavailable";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading next Webb image: {ex.Message}");
+            selectedTitle = "Error loading image";
+            selectedDescription = "Description unavailable";
+        }
     }
 
     /// <summary>
