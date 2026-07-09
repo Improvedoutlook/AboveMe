@@ -247,6 +247,66 @@
         </div>
     }
     <div class="form-group mt-3">
+        <button class="btn btn-primary" @onclick="ToggleAsteroids">@((showAsteroids ? "Hide" : "Show") + " Asteroid Data")</button>
+    </div>
+    @if (showAsteroids)
+    {
+    <div class="asteroids-display mt-4">
+        @if (isLoadingAsteroids)
+        {
+            <div class="text-info text-center">Loading near-Earth asteroid data…</div>
+        }
+        else if (!string.IsNullOrEmpty(AsteroidError))
+        {
+            <div class="text-warning text-center" style="color: #ffc107;">@AsteroidError</div>
+        }
+        else if (VisibleAsteroids == null || VisibleAsteroids.Count == 0)
+        {
+            <div class="text-warning text-center">No near-Earth asteroids found in the upcoming 7-day window.</div>
+        }
+        else
+        {
+            <div style="color:#aaa; font-size:0.85em; text-align:center; margin-bottom:1em;">
+                @VisibleAsteroids.Count near-Earth object@(VisibleAsteroids.Count == 1 ? "" : "s") in the next 7 days, sorted by closest approach distance.
+            </div>
+            <ul class="list-unstyled">
+                @for (int i = 0; i < Math.Min(currentAsteroidDisplayCount, VisibleAsteroids.Count); i++)
+                {
+                    var asteroid = VisibleAsteroids[i];
+                    string borderColor = asteroid.IsPotentiallyHazardous ? "#dc3545" : "#0d6efd";
+                    <li class="asteroid-card" style="background: rgba(255,255,255,0.06); border-radius: 10px; padding: 1em 1.2em; margin-bottom: 1.2em; border-left: 4px solid @borderColor; color: #fff; text-align: left;">
+                        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:.5em; flex-wrap:wrap;">
+                            <strong style="font-size:1.05em;">@asteroid.Name</strong>
+                            @if (asteroid.IsPotentiallyHazardous)
+                            {
+                                <span style="background:#dc3545; color:#fff; padding:.15em .55em; border-radius:4px; font-size:.7em;">⚠ Potentially Hazardous</span>
+                            }
+                        </div>
+                        <div style="color:#ddd; margin-top:.5em; font-size:.95em; line-height:1.6;">
+                            <div><b>Close Approach:</b> @asteroid.CloseApproachDate.ToString("MMM dd, yyyy")</div>
+                            <div><b>Estimated Diameter:</b> @asteroid.DiameterMinKm.ToString("0.00") km – @asteroid.DiameterMaxKm.ToString("0.00") km</div>
+                            <div><b>Miss Distance:</b> @asteroid.MissDistanceLunar.ToString("0.#") LD (~@FormatLargeDistance(asteroid.MissDistanceKm))</div>
+                            <div><b>Relative Velocity:</b> @asteroid.RelativeVelocityKps.ToString("0.00") km/s</div>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(asteroid.NasaJplUrl))
+                        {
+                            <div style="margin-top:.6em;">
+                                <a href="@asteroid.NasaJplUrl" target="_blank" rel="noopener noreferrer" style="color:#9cf;">NASA JPL →</a>
+                            </div>
+                        }
+                    </li>
+                }
+            </ul>
+            @if (currentAsteroidDisplayCount < VisibleAsteroids.Count)
+            {
+                <div class="text-center mt-3">
+                    <button class="btn btn-outline-light" @onclick="ShowMoreAsteroids">Show More</button>
+                </div>
+            }
+        }
+    </div>
+    }
+    <div class="form-group mt-3">
         <button class="btn btn-primary" @onclick="ToggleMeteorShowers">@((showMeteorShowers ? "Hide" : "Show") + " Meteor Showers")</button>
     </div>
     @if (showMeteorShowers)
@@ -447,6 +507,13 @@
     private bool showConstellations;
     private bool showComets;
     private bool showMeteorShowers;
+    private bool showAsteroids;
+    private bool isLoadingAsteroids;
+    private List<AsteroidData> VisibleAsteroids = new List<AsteroidData>();
+    private string AsteroidError = string.Empty;
+    private string lastAsteroidsCacheKey = string.Empty;
+    private int currentAsteroidDisplayCount = 10;
+
     private List<string> VisibleConstellations = new List<string>();
     private bool isLoadingComets;
     private List<CometForecast> VisibleComets = new List<CometForecast>();
@@ -673,10 +740,34 @@
     }
 
     private string NasaError = string.Empty;
-    private NasaApodData? cachedNasaData;
-    private NasaApodData? nasaData;
-    
-    // Webb Space Telescope state
+    private NasaApodData? cachedNasaData;        private NasaApodData? nasaData;
+
+        /// <summary>
+        /// Near-Earth asteroid data fetched from NASA NeoWs feed
+        /// (https://api.nasa.gov/neo/rest/v1/feed) for a rolling 7-day window.
+        /// Captured once per UTC day and cached in localStorage so subsequent
+        /// toggles within the same day are instant and resilient to network blips.
+        /// </summary>
+        public class AsteroidData
+        {
+            public string Name { get; set; } = string.Empty;
+            public string NasaJplUrl { get; set; } = string.Empty;
+            public DateTime CloseApproachDate { get; set; }
+            public double DiameterMinKm { get; set; }
+            public double DiameterMaxKm { get; set; }
+            public double MissDistanceKm { get; set; }
+            public double MissDistanceLunar { get; set; }
+            public double RelativeVelocityKps { get; set; }
+            public bool IsPotentiallyHazardous { get; set; }
+        }
+
+        /// <summary>
+        /// Per-asteroid orbital elements + physical parameters fetched from the
+        /// NASA JPL Small-Body Database API (https://ssd-api.jpl.nasa.gov/sbdb.api).
+        /// Returned for a single object queried by name/designation/SPK-ID.
+/// <summary>
+        /// Single orbital element or physical-parameter record as returned by SBDB.
+// Webb Space Telescope state
     private bool showWebb = false;
     private string selectedImagePath = string.Empty;
     private string selectedTitle = string.Empty;
@@ -695,6 +786,7 @@
         showComets = false;
         showWebb = false;
         showMeteorShowers = false;
+        showAsteroids = false;
         // Load API keys from configuration
         nasaApiKey = Configuration["ApiKeys:NasaApiKey"] ?? "DEMO_KEY";
         astronomyApiKey = Configuration["ApiKeys:AstronomyApiKey"] ?? "DEMO_KEY";
@@ -1657,4 +1749,261 @@
         currentShowerDisplayCount += 5;
         StateHasChanged();
     }
+
+    /// <summary>
+    /// Toggle the Asteroid Data panel and fetch the NeoWs feed on first open.
+    /// </summary>
+    async Task ToggleAsteroids()
+    {
+        showAsteroids = !showAsteroids;
+        if (showAsteroids)
+        {
+            // Reset pagination so the most relevant (closest) entries always show first.
+            currentAsteroidDisplayCount = 10;
+            await FetchAsteroidsAsync();
+        }
+    }
+
+    /// <summary>
+    /// Loads near-Earth asteroid data from the NASA NeoWs REST API for the
+    /// next 7 days, caches the result in localStorage keyed by today's UTC
+    /// date, and sorts entries by closest approach distance.
+    /// </summary>
+    async Task FetchAsteroidsAsync()
+    {
+        if (isLoadingAsteroids) return;
+
+        // Cache key: today's UTC date. Granularity is coarse (per-day) because
+        // NeoWs data shifts only slightly day-to-day and re-fetching every page
+        // load would burn through the API key's hourly rate limit.
+        string todayKey = DateTime.UtcNow.Date.ToString("yyyyMMdd");
+        string cacheKey = $"asteroidFeed_v1:{todayKey}";
+
+        if (cacheKey == lastAsteroidsCacheKey && VisibleAsteroids.Count > 0)
+        {
+            return; // Already loaded this key in this session.
+        }
+
+        // Try localStorage cache first.
+        try
+        {
+            var cached = await LocalStorage.GetItemAsync<List<AsteroidData>>(cacheKey);
+            if (cached != null)
+            {
+                VisibleAsteroids = cached;
+                AsteroidError = string.Empty;
+                lastAsteroidsCacheKey = cacheKey;
+                StateHasChanged();
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"asteroid localStorage read failed: {ex.Message}");
+        }
+
+        isLoadingAsteroids = true;
+        AsteroidError = string.Empty;
+        StateHasChanged();
+        try
+        {
+            if (string.IsNullOrWhiteSpace(nasaApiKey))
+            {
+                AsteroidError = "NASA API key is missing. Set ApiKeys:NasaApiKey in appsettings.json.";
+                isLoadingAsteroids = false;
+                StateHasChanged();
+                return;
+            }
+
+            // NeoWs supports start..end ranges up to 7 days apart. We use a
+            // rolling window starting today (UTC) so the user always sees the
+            // next week's close approaches, not stale historical data.
+            DateTime startDate = DateTime.UtcNow.Date;
+            DateTime endDate = startDate.AddDays(7);
+            string url = $"https://api.nasa.gov/neo/rest/v1/feed?start_date={startDate:yyyy-MM-dd}&end_date={endDate:yyyy-MM-dd}&api_key={nasaApiKey}";
+
+            HttpResponseMessage response = await Http.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var parsed = ParseNeowsFeed(json);
+
+                // Sort by close approach date ascending, then by miss distance
+                // ascending so the closest, most imminent encounters surface first.
+                VisibleAsteroids = parsed
+                    .OrderBy(a => a.CloseApproachDate)
+                    .ThenBy(a => a.MissDistanceKm)
+                    .ToList();
+
+                lastAsteroidsCacheKey = cacheKey;
+                try
+                {
+                    await LocalStorage.SetItemAsync(cacheKey, VisibleAsteroids);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"asteroid localStorage write failed (non-fatal): {ex.Message}");
+                }
+            }
+            else
+            {
+                string body = await response.Content.ReadAsStringAsync();
+                AsteroidError = $"NASA NeoWs returned {(int)response.StatusCode} {response.ReasonPhrase}. Try again later.";
+                Console.WriteLine($"NeoWs error body: {body}");
+            }
+        }
+        catch (Exception ex)
+        {
+            AsteroidError = $"Error loading asteroid data: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingAsteroids = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Parse a NeoWs /feed response payload using JsonDocument. The schema
+    /// nests per-day arrays under "near_earth_objects" and uses stringified
+    /// numbers for relative_velocity / miss_distance, so we walk defensively
+    /// rather than deserializing into a deeply nested type graph.
+    /// </summary>
+    List<AsteroidData> ParseNeowsFeed(string json)
+    {
+        var result = new List<AsteroidData>();
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        if (!root.TryGetProperty("near_earth_objects", out var byDate) || byDate.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            return result;
+        }
+
+        foreach (var dateNode in byDate.EnumerateObject())
+        {
+            foreach (var neo in dateNode.Value.EnumerateArray())
+            {
+                var entry = new AsteroidData
+                {
+                    Name = TryGetString(neo, "name"),
+                    NasaJplUrl = TryGetString(neo, "nasa_jpl_url"),
+                    IsPotentiallyHazardous = TryGetBool(neo, "is_potentially_hazardous_asteroid")
+                };
+
+                if (neo.TryGetProperty("estimated_diameter", out var diameter) &&
+                    diameter.TryGetProperty("kilometers", out var kmDiameter))
+                {
+                    if (kmDiameter.TryGetProperty("estimated_diameter_min", out var dMin) && dMin.ValueKind == System.Text.Json.JsonValueKind.Number)
+                        entry.DiameterMinKm = dMin.GetDouble();
+                    if (kmDiameter.TryGetProperty("estimated_diameter_max", out var dMax) && dMax.ValueKind == System.Text.Json.JsonValueKind.Number)
+                        entry.DiameterMaxKm = dMax.GetDouble();
+                }
+
+                if (neo.TryGetProperty("close_approach_data", out var caArray) &&
+                    caArray.ValueKind == System.Text.Json.JsonValueKind.Array &&
+                    caArray.GetArrayLength() > 0)
+                {
+                    var firstApproach = caArray[0];
+                    if (firstApproach.TryGetProperty("close_approach_date", out var dateStr))
+                    {
+                        if (DateTime.TryParse(dateStr.GetString(), out var parsedDate))
+                            entry.CloseApproachDate = parsedDate;
+                    }
+                    if (firstApproach.TryGetProperty("relative_velocity", out var velocity) &&
+                        velocity.TryGetProperty("kilometers_per_second", out var kps))
+                    {
+                        // NeoWs emits this as a string, not a number.
+                        if (double.TryParse(kps.GetString(),
+                            System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            out var kpsVal))
+                        {
+                            entry.RelativeVelocityKps = kpsVal;
+                        }
+                    }
+                    if (firstApproach.TryGetProperty("miss_distance", out var miss))
+                    {
+                        if (miss.TryGetProperty("kilometers", out var kmMiss))
+                        {
+                            if (double.TryParse(kmMiss.GetString(),
+                                System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture,
+                                out var kmVal))
+                                entry.MissDistanceKm = kmVal;
+                        }
+                        if (miss.TryGetProperty("lunar", out var lunarMiss))
+                        {
+                            if (double.TryParse(lunarMiss.GetString(),
+                                System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture,
+                                out var lunarVal))
+                                entry.MissDistanceLunar = lunarVal;
+                        }
+                    }
+                }
+
+                // Skip entries we couldn't meaningfully populate.
+                if (!string.IsNullOrWhiteSpace(entry.Name))
+                    result.Add(entry);
+            }
+        }
+        return result;
+    }
+
+    private static string TryGetString(System.Text.Json.JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var prop) && prop.ValueKind == System.Text.Json.JsonValueKind.String)
+            return prop.GetString() ?? string.Empty;
+        return string.Empty;
+    }
+
+    private static bool TryGetBool(System.Text.Json.JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var prop))
+        {
+            if (prop.ValueKind == System.Text.Json.JsonValueKind.True) return true;
+            if (prop.ValueKind == System.Text.Json.JsonValueKind.False) return false;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Format a (typically very large) miss-distance value in km with
+    /// human-friendly units: millions / thousands / km.
+    /// </summary>
+    private string FormatLargeDistance(double km)
+    {
+        if (km >= 1_000_000) return $"{km / 1_000_000:0.##} million km";
+        if (km >= 1_000) return $"{km / 1_000:0.#}k km";
+        return $"{km:0} km";
+    }
+
+    /// <summary>
+    /// Show 10 more asteroids in the list.
+    /// </summary>
+    void ShowMoreAsteroids()
+    {
+        currentAsteroidDisplayCount += 10;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Open the per-asteroid orbital details modal and load (or reuse cached)
+/// <summary>
+    /// Look up orbital elements + physical parameters for a single asteroid
+    /// from NASA JPL's Small-Body Database, caching per-object response in
+    /// localStorage keyed on the sanitized identifier. SBDB is the canonical
+    /// source for orbital mechanics — supports CORS, no auth required, and
+    /// rate-limiter is IP-based, not key-based.
+/// <summary>
+    /// Sanitize an asteroid name/designation for use as a localStorage key
+    /// component. SBDB accepts names like "(2010 AB78)" or "433 Eros" whose
+    /// characters would collide with our key namespace conventions.
+/// <summary>
+    /// Defensively parse an SBDB JSON response. The endpoint returns either an
+    /// "object" payload on success or a { code, message } envelope on failure;
+    /// we walk the JSON document with TryGetProperty / ValueKind checks so
+    /// missing or malformed fields don't crash the UI.
+
 }
