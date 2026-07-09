@@ -12,6 +12,7 @@ Each section is a toggle button — open only what you want, and the rest stays 
 - **James Webb Space Telescope Gallery** — 30 curated JWST images with descriptions, each loaded from the project's `wwwroot/Webb Space Telescope Images/` directory. Toggling the section advances to the next image in the list, so repeatedly clicking "Show Webb Space Telescope" walks you through the gallery.
 - **Comet Data** — curated forecast catalog sourced from JPL Horizons with named comets (Tsuchinshan-ATLAS, ATLAS, Encke, Olbers, Churyumov-Gerasimenko, …). Each entry shows designation, status pill (`Upcoming` / `Active` / `Past` derived from the current UTC date), perihelion date, peak window, peak magnitude, summary, and notes. The list is filtered to the comets visible from your latitude.
 - **Meteor Showers** — American Meteor Society 2025–2026 calendar (Quadrantids, Lyrids, Eta Aquarids, Perseids, Orionids, Leonids, Geminids, Ursids, plus Taurids/Alpha Capricornids/Delta Aquarids). Hemispheres are filtered to your location, peak times are shifted into your timezone, paginated 5 at a time with a "Show More" button.
+- **Asteroid Data** — NASA Near-Earth Object Web Service (NeoWs) feed for the next 7 days, ordered first by upcoming approach date, then by closest miss distance within each day. Each card shows the object's name, a red ⚠ badge if it's potentially hazardous, close-approach date, estimated diameter range (km), miss distance in lunar distances plus km, and relative velocity (km/s). A "NASA JPL →" link per object opens the JPL SBDB lookup page for that designation. The toggle loads on demand, the day's response is cached in `localStorage` (keyed by `asteroidFeed_v1:YYYYMMDD` UTC) to spare the rate-limited endpoint, and the list paginates 10 at a time via a "Show More" button.
 
 ## Tech Stack
 
@@ -28,6 +29,7 @@ Each section is a toggle button — open only what you want, and the rest stays 
 | Moon Data | `https://api.ipgeolocation.io/v2/astronomy` | API key |
 | Lunar Eclipse | Curated 2023–2035 list (static) | — |
 | NASA APOD | `https://api.nasa.gov/planetary/apod` | API key (`DEMO_KEY` fallback) |
+| Asteroid Data | `https://api.nasa.gov/neo/rest/v1/feed` | API key (same `NasaApiKey`, `DEMO_KEY` fallback) |
 | Webb gallery | `wwwroot/Webb Space Telescope Images/` (curated 1–30) | — |
 | Comet forecasts | `wwwroot/comets-forecasts.json` (curated from JPL Horizons/SBDB) | — |
 | Meteor showers | American Meteor Society 2025–2026 calendar (static) | — |
