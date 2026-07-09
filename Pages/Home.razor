@@ -191,35 +191,58 @@
         </div>
     }
     <div class="form-group mt-3">
-        <button class="btn btn-primary" @onclick="ToggleComets">@((showComets ? "Hide" : "Show") + " Next Comets")</button>
+        <button class="btn btn-primary" @onclick="ToggleComets">@((showComets ? "Hide" : "Show") + " Comet Data")</button>
     </div>
     @if (showComets)
     {
-        <div class="comets-display mt-4 text-center">
-            @if (isLoadingAstronomyData)
+        <div class="comets-display mt-4">
+            @if (isLoadingComets)
             {
-                <div class="text-info">Loading comets...</div>
+                <div class="text-info text-center">Loading comet forecasts…</div>
             }
             else if (!string.IsNullOrEmpty(CometError))
             {
-                <div class="text-warning" style="color: #ffc107;">@CometError</div>
+                <div class="text-warning text-center" style="color: #ffc107;">@CometError</div>
             }
-            else if (NextComets == null || NextComets.Count == 0)
+            else if (VisibleComets == null || VisibleComets.Count == 0)
             {
-                <div class="text-warning">No comet data available for your location.</div>
+                <div class="text-warning text-center">No comet forecasts available. Try sharing your location for personalized results.</div>
             }
             else
             {
                 <ul class="list-unstyled" style="color:#fff;">
-                    @foreach (CometInfo comet in NextComets)
-                    {
-                        DateTime dt;
-                        string formattedDate = DateTime.TryParse(comet.NextDate, out dt)
-                            ? dt.ToString(format: "MM/dd/yyyy")
-                            : comet.NextDate;
-                        <li><b>@comet.Name</b> — Next visible: @formattedDate</li>
-                    }
+                @foreach (CometForecast comet in VisibleComets)
+                {
+                    <li class="comet-item" style="margin-bottom: 1.25em; padding: 1em 1.2em; background: rgba(255,255,255,0.06); border-radius: 8px; text-align: left;">
+                        <div style="font-weight: bold; font-size: 1.1em;">
+                            Comet @comet.Name <span style="color:#aaa; font-weight: normal;">(@comet.Designation)</span>
+                            <span style="background:@GetStatusColor(comet.DisplayStatus); color:#fff; padding: 0.15em 0.55em; border-radius: 4px; font-size: 0.7em; margin-left:0.4em; vertical-align: middle;">@comet.DisplayStatus</span>
+                        </div>
+                        <div style="color: #ddd; margin-top: 0.4em; font-size: 0.95em;">
+                            <span><b>Perihelion:</b> @comet.PerihelionDate.ToString("MMM dd, yyyy")</span>
+                            <span style="margin-left: 1em;"><b>Peak window:</b> @comet.PeakWindowStart.ToString("MMM dd") – @comet.PeakWindowEnd.ToString("MMM dd, yyyy")</span>
+                            <span style="margin-left: 1em;"><b>Peak mag:</b> @comet.PeakMagnitude.ToString("0.#")</span>
+                        </div>
+                        <div style="margin-top: 0.55em; line-height: 1.5;">@comet.Summary</div>
+                        @if (!string.IsNullOrWhiteSpace(comet.Notes))
+                        {
+                            <div style="margin-top: 0.4em; color: #aaa; font-size: 0.85em; font-style: italic;">@comet.Notes</div>
+                        }
+                    </li>
+                }
                 </ul>
+                @if (!string.IsNullOrEmpty(userLatitude))
+                {
+                    <div class="text-center" style="color: #aaa; font-size: 0.85em; margin-top: 0.5em;">
+                        Filtered for your latitude (~@userLatitude°). Share location for finer visibility modeling.
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center" style="color: #aaa; font-size: 0.85em; margin-top: 0.5em;">
+                        Showing the global catalog. Share your location to filter by latitude.
+                    </div>
+                }
             }
         </div>
     }
@@ -425,7 +448,9 @@
     private bool showComets;
     private bool showMeteorShowers;
     private List<string> VisibleConstellations = new List<string>();
-    private List<CometInfo> NextComets = new List<CometInfo>();
+    private bool isLoadingComets;
+    private List<CometForecast> VisibleComets = new List<CometForecast>();
+    private string lastCometsCacheKey = string.Empty;
     private List<MeteorShowerData> VisibleMeteorShowers = new List<MeteorShowerData>();
     private string ConstellationError = string.Empty;
     private string CometError = string.Empty;
@@ -455,6 +480,7 @@
     [Inject] IJSRuntime JS { get; set; } = default!;
     [Inject] IConfiguration Configuration { get; set; } = default!;
     [Inject] LocalStorageService LocalStorage { get; set; } = default!;
+    [Inject] AboveMe.Services.CometService CometService { get; set; } = default!;
     @inject HttpClient Http
 
     public class GeolocationResult
@@ -498,16 +524,8 @@
         // Add more fields as needed
     }
 
-    public class CometInfo
-    {
-        public string Name { get; set; }
-        public string NextDate { get; set; }
-        public CometInfo(string name, string nextDate)
-        {
-            Name = name;
-            NextDate = nextDate;
-        }
-    }
+    // CometInfo has been replaced by AboveMe.Services.CometForecast
+    // (loaded from wwwroot/comets-forecasts.json). See FetchCometsAsync below.
 
     /// <summary>
     /// Hemisphere visibility constraint for meteor showers
@@ -1003,115 +1021,103 @@
         }
     }
 
-    void ToggleComets()
+    async Task ToggleComets()
     {
         showComets = !showComets;
         if (showComets)
         {
-            // Always update NextComets when showing
-            NextComets = GetNextComets(selectedCountry, selectedTimezone);
-            if (astronomyData == null)
-            {
-                _ = FetchAstronomyDataAsync();
-            }
+            await FetchCometsAsync();
         }
     }
 
-    List<CometInfo> GetNextComets(string? country, string? timezone)
+    /// <summary>
+    /// Loads the curated comet forecast catalog via CometService, filters by the
+    /// user's latitude, and persists the filtered result in localStorage keyed
+    /// on (rounded-lat, today-UTC) so subsequent toggles within the same day
+    /// are instant and resilient to network blips.
+    /// </summary>
+    async Task FetchCometsAsync()
     {
-        // Build candidate list based on country/timezone; then filter to future-only dates.
-        var candidates = new List<CometInfo>();
+        if (isLoadingComets) return;
 
-        if (!string.IsNullOrEmpty(country))
+        double? lat = null;
+        if (!string.IsNullOrWhiteSpace(userLatitude) &&
+            double.TryParse(userLatitude, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsedLat))
         {
-            candidates = country switch
+            lat = parsedLat;
+        }
+
+        // Cache key: lat rounded to 0.5° (~55 km) + today UTC.
+        // Granularity tradeoff: too fine wastes cache slots; too coarse yields
+        // visibly wrong filters near the equator for high-declination comets.
+        double roundedLat = lat.HasValue ? Math.Round(lat.Value * 2) / 2.0 : 999;
+        string latKey = lat.HasValue
+            ? roundedLat.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)
+            : "global";
+        string cacheKey = $"cometForecasts_v1:{latKey}:{DateTime.UtcNow.Date:yyyyMMdd}";
+
+        if (cacheKey == lastCometsCacheKey && VisibleComets.Count > 0)
+        {
+            return; // Already loaded for this key in this session.
+        }
+
+        // Try localStorage cache first.
+        try
+        {
+            var cached = await LocalStorage.GetItemAsync<List<CometForecast>>(cacheKey);
+            if (cached != null)
             {
-                "United States" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061"),
-                    new CometInfo(name: "Comet Encke", nextDate: "10/17/2026"),
-                    new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
-                },
-                "United Kingdom" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet NEOWISE", nextDate: "03/15/2027"),
-                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061")
-                },
-                "Canada" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025"),
-                    new CometInfo(name: "Comet Encke", nextDate: "10/17/2026")
-                },
-                "Australia" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet McNaught", nextDate: "01/14/2026"),
-                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061")
-                },
-                "China" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Ikeya–Zhang", nextDate: "01/04/2030"),
-                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061")
-                },
-                _ => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061"),
-                    new CometInfo(name: "Comet Encke", nextDate: "10/17/2026"),
-                    new CometInfo(name: "Comet NEOWISE", nextDate: "03/15/2027"),
-                    new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
-                }
-            };
+                VisibleComets = cached;
+                CometError = string.Empty;
+                lastCometsCacheKey = cacheKey;
+                StateHasChanged();
+                return;
+            }
         }
-        else if (!string.IsNullOrEmpty(timezone))
+        catch (Exception ex)
         {
-            candidates = timezone switch
+            Console.WriteLine($"comet localStorage read failed: {ex.Message}");
+        }
+
+        isLoadingComets = true;
+        CometError = string.Empty;
+        StateHasChanged();
+        try
+        {
+            var forecasts = await CometService.GetVisibleForecastsAsync(lat);
+            VisibleComets = forecasts;
+            lastCometsCacheKey = cacheKey;
+            try
             {
-                "Eastern Standard Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061"),
-                    new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
-                },
-                "Central Standard Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Encke", nextDate: "10/17/2026"),
-                    new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
-                },
-                "Mountain Standard Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
-                },
-                "Pacific Standard Time" => new List<CometInfo>() {
-                    // fixed formatting error
-                    new CometInfo(name: "Comet NEOWISE", nextDate: "03/15/2027")
-                },
-                "Greenwich Mean Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061")
-                },
-                "Central European Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Encke", nextDate: "10/17/2026")
-                },
-                "Australian Eastern Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet McNaught", nextDate: "01/14/2026")
-                },
-                "China Standard Time" => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Ikeya–Zhang", nextDate: "01/04/2030")
-                },
-                _ => new List<CometInfo>() {
-                    new CometInfo(name: "Comet Halley", nextDate: "07/28/2061"),
-                    new CometInfo(name: "Comet Encke", nextDate: "10/17/2026"),
-                    new CometInfo(name: "Comet NEOWISE", nextDate: "03/15/2027"),
-                    new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
-                }
-            };
+                await LocalStorage.SetItemAsync(cacheKey, forecasts);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"comet localStorage write failed (non-fatal): {ex.Message}");
+            }
         }
-        else if (!string.IsNullOrEmpty(userLatitude) && !string.IsNullOrEmpty(userLongitude))
+        catch (Exception ex)
         {
-            candidates = new List<CometInfo>() {
-                new CometInfo(name: "Comet Halley", nextDate: "07/28/2061"),
-                new CometInfo(name: "Comet Encke", nextDate: "10/17/2026"),
-                new CometInfo(name: "Comet NEOWISE", nextDate: "03/15/2027"),
-                new CometInfo(name: "Comet Leonard", nextDate: "12/12/2025")
-            };
+            CometError = $"Unable to load comet forecasts: {ex.Message}";
         }
-
-        // Filter candidates to only future dates (dates strictly after today).
-        var now = DateTime.UtcNow.Date;
-        var future = candidates
-            .Where(c => DateTime.TryParse(c.NextDate, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d) && d.Date > now)
-            .OrderBy(c => DateTime.Parse(c.NextDate, System.Globalization.CultureInfo.InvariantCulture))
-            .ToList();
-
-        return future;
+        finally
+        {
+            isLoadingComets = false;
+            StateHasChanged();
+        }
+    }    /// <summary>
+    /// Returns a Bootstrap-friendly background color for comet status pills.
+    /// DisplayStatus is derived from current date so labels stay accurate.
+    /// </summary>
+    string GetStatusColor(string status)
+    {
+        return (status ?? string.Empty) switch
+        {
+            "Active" => "#28a745",   // green
+            "Upcoming" => "#0d6efd", // blue
+            "Past" => "#6c757d",     // grey
+            _ => "#999999"
+        };
     }
 
     async Task FetchAstronomyDataAsync()
@@ -1131,7 +1137,7 @@
             {
                 LunarEclipseError = "Astronomy API key is missing. Please set your API key in the environment variables.";
                 ConstellationError = LunarEclipseError;
-                CometError = LunarEclipseError;
+                // CometError is owned by FetchCometsAsync — don't clear it here.
                 isLoadingAstronomyData = false;
                 StateHasChanged();
                 return;
@@ -1215,21 +1221,21 @@
                 UpdateLastQuery();
                 LunarEclipseError = string.Empty;
                 ConstellationError = string.Empty;
-                CometError = string.Empty;
+                // CometError is owned by FetchCometsAsync — don't clear it here.
             }
             else
             {
                 string errorBody = await response.Content.ReadAsStringAsync();
                 LunarEclipseError = "Failed to fetch astronomy data. Please check your API key and try again.";
                 ConstellationError = LunarEclipseError;
-                CometError = LunarEclipseError;
+                // CometError is owned by FetchCometsAsync — don't clear it here.
             }
         }
         catch (Exception ex)
         {
             LunarEclipseError = $"Error: {ex.Message}";
             ConstellationError = $"Error: {ex.Message}";
-            CometError = $"Error: {ex.Message}";
+            // CometError is owned by FetchCometsAsync — don't clobber it here.
         }
         finally
         {

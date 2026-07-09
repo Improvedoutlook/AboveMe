@@ -13,6 +13,9 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 // Register LocalStorageService for persistent user preferences
 builder.Services.AddScoped<LocalStorageService>();
 
+// Register CometService for fetching the curated comet visibility catalog
+builder.Services.AddScoped<CometService>();
+
 // Load environment-specific configuration only in Development
 // In Production (GitHub Pages), API keys are injected into appsettings.json by the CI/CD workflow
 if (builder.HostEnvironment.IsDevelopment())

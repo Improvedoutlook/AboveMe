@@ -1,0 +1,72 @@
+[
+  {
+    "designation": "C/2023 A3",
+    "name": "Tsuchinshan-ATLAS",
+    "jpl_command": "DES=C/2023 A3;",
+    "perihelion_date": "2024-09-27",
+    "peak_window_start": "2024-10-12",
+    "peak_window_end": "2024-10-28",
+    "peak_magnitude": -0.5,
+    "min_latitude_visible": -90,
+    "max_latitude_visible": 90,
+    "status": "Past",
+    "summary": "A naked-eye comet that reached magnitude ~0 in mid-October 2024. Rare bright comet from the Oort cloud. N. hemisphere observers saw it in the evening western sky after perihelion; S. hemisphere caught the morning show in late October.",
+    "notes": "Best viewed in twilight. Developed a prominent anti-tail visible from mid-northern latitudes around Oct 14\u201320."
+  },
+  {
+    "designation": "C/2024 G3",
+    "name": "ATLAS",
+    "jpl_command": "DES=C/2024 G3;",
+    "perihelion_date": "2025-01-13",
+    "peak_window_start": "2025-01-10",
+    "peak_window_end": "2025-01-18",
+    "peak_magnitude": -3.0,
+    "min_latitude_visible": -90,
+    "max_latitude_visible": 30,
+    "status": "Past",
+    "summary": "A bright sungrazer-class comet that reached near-negative magnitudes during its mid-January 2025 perihelion. Predominantly visible from southern latitudes, with only brief northern-hemisphere views around discovery.",
+    "notes": "Reached perihelion only 0.094 AU from the Sun, making it a Kreutz-group candidate. Most observers required an unobstructed western horizon."
+  },
+  {
+    "designation": "2P",
+    "name": "Encke",
+    "jpl_command": "DES=2P;",
+    "perihelion_date": "2026-10-17",
+    "peak_window_start": "2026-10-10",
+    "peak_window_end": "2026-10-26",
+    "peak_magnitude": 6.5,
+    "min_latitude_visible": -90,
+    "max_latitude_visible": 40,
+    "status": "Upcoming",
+    "summary": "Short-period comet (3.3 yr) discovered in 1819. The October 2026 return will be unfavorable \u2014 the geometry places it well below the celestial equator for most of its peak brightness window, so southern-hemisphere observers get the better show.",
+    "notes": "Generally not naked-eye; requires binoculars (mag 6\u20137 at best) and a very low eastern-horizon view from mid-southern latitudes."
+  },
+  {
+    "designation": "13P",
+    "name": "Olbers",
+    "jpl_command": "DES=13P;",
+    "perihelion_date": "2024-06-29",
+    "peak_window_start": "2024-07-01",
+    "peak_window_end": "2026-12-31",
+    "peak_magnitude": 7.6,
+    "min_latitude_visible": -50,
+    "max_latitude_visible": 70,
+    "status": "Past",
+    "summary": "A 69-year-period comet last visited the inner solar system in 2024. It brightened to mag ~7 around its June 2024 perihelion, remained observable in telescopes through late 2025, and is now receding.",
+    "notes": "Not naked-eye; binocular target at best. Best positioned for mid-Northern observers in mid-2024."
+  },
+  {
+    "designation": "67P",
+    "name": "Churyumov-Gerasimenko",
+    "jpl_command": "DES=67P;",
+    "perihelion_date": "2029-04-12",
+    "peak_window_start": "2028-12-01",
+    "peak_window_end": "2029-08-31",
+    "peak_magnitude": 9.0,
+    "min_latitude_visible": -45,
+    "max_latitude_visible": 60,
+    "status": "Upcoming",
+    "summary": "Famous as ESA\u2019s Rosetta mission target (2014\u20132016). Returns to perihelion every ~6.4 yr; the 2029 apparition will be modestly bright (mag ~9) and observable from the Northern Hemisphere during winter and from both hemispheres by spring.",
+    "notes": "Telescope-only. Best viewed for mid-Northern (~30\u201360\u00b0 N) observers in late winter through spring 2029."
+  }
+]

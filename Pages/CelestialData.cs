@@ -74,18 +74,11 @@ namespace AboveMe.Pages
             public string? MoonIlluminationPercentage { get; set; }
         }
 
-        public class CometInfo
-        {
-            public string Name { get; set; }
-            public string NextDate { get; set; }
-            public CometInfo(string name, string nextDate)
-            {
-                Name = name;
-                NextDate = nextDate;
-            }
-        }
+    // CometInfo (legacy) and GetNextComets() below have been removed;
+    // comet data is now served by AboveMe.Services.CometService loaded
+    // from wwwroot/comets-forecasts.json (JPL Horizons-derived catalog).
 
-        public class NasaApodData
+    public class NasaApodData
         {
             [JsonPropertyName("copyright")]
             public string? Copyright { get; set; }
@@ -199,92 +192,8 @@ namespace AboveMe.Pages
             }
         }
 
-        public static List<CometInfo> GetNextComets(string? country, string? timezone, string? userLatitude = null, string? userLongitude = null)
-        {
-            if (!string.IsNullOrEmpty(country))
-            {
-                return country switch
-                {
-                    "United States" => new() {
-                        new CometInfo("Comet Halley", "07/28/2061"),
-                        new CometInfo("Comet Encke", "10/17/2026"),
-                        new CometInfo("Comet Leonard", "12/12/2025")
-                    },
-                    "United Kingdom" => new() {
-                        new CometInfo("Comet NEOWISE", "03/15/2027"),
-                        new CometInfo("Comet Halley", "07/28/2061")
-                    },
-                    "Canada" => new() {
-                        new CometInfo("Comet Leonard", "12/12/2025"),
-                        new CometInfo("Comet Encke", "10/17/2026")
-                    },
-                    "Australia" => new() {
-                        new CometInfo("Comet McNaught", "01/14/2026"),
-                        new CometInfo("Comet Halley", "07/28/2061")
-                    },
-                    "China" => new() {
-                        new CometInfo("Comet Ikeya–Zhang", "01/04/2030"),
-                        new CometInfo("Comet Halley", "07/28/2061")
-                    },
-                    _ => new() {
-                        new CometInfo("Comet Halley", "07/28/2061"),
-                        new CometInfo("Comet Encke", "10/17/2026"),
-                        new CometInfo("Comet NEOWISE", "03/15/2027"),
-                        new CometInfo("Comet Leonard", "12/12/2025")
-                    }
-                };
-            }
-            else if (!string.IsNullOrEmpty(timezone))
-            {
-                return timezone switch
-                {
-                    "Eastern Standard Time" => new() {
-                        new CometInfo("Comet Halley", "07/28/2061"),
-                        new CometInfo("Comet Leonard", "12/12/2025")
-                    },
-                    "Central Standard Time" => new() {
-                        new CometInfo("Comet Encke", "10/17/2026"),
-                        new CometInfo("Comet Leonard", "12/12/2025")
-                    },
-                    "Mountain Standard Time" => new() {
-                        new CometInfo("Comet Leonard", "12/12/2025")
-                    },
-                    "Pacific Standard Time" => new() {
-                        new CometInfo("Comet NEOWISE", "03/015/2027")
-                    },
-                    "Greenwich Mean Time" => new() {
-                        new CometInfo("Comet Halley", "07/28/2061")
-                    },
-                    "Central European Time" => new() {
-                        new CometInfo("Comet Encke", "10/17/2026")
-                    },
-                    "Australian Eastern Time" => new() {
-                        new CometInfo("Comet McNaught", "01/014/2026")
-                    },
-                    "China Standard Time" => new() {
-                        new CometInfo("Comet Ikeya–Zhang", "01/04/2030")
-                    },
-                    _ => new() {
-                        new CometInfo("Comet Halley", "07/28/2061"),
-                        new CometInfo("Comet Encke", "10/17/2026"),
-                        new CometInfo("Comet NEOWISE", "03/15/2027"),
-                        new CometInfo("Comet Leonard", "12/12/2025")
-                    }
-                };
-            }
-            else if (!string.IsNullOrEmpty(userLatitude) && !string.IsNullOrEmpty(userLongitude))
-            {
-                return new() {
-                    new CometInfo("Comet Halley", "07/28/2061"),
-                    new CometInfo("Comet Encke", "10/17/2026"),
-                    new CometInfo("Comet NEOWISE", "03/15/2027"),
-                    new CometInfo("Comet Leonard", "12/12/2025")
-                };
-            }
-            else
-            {
-                return new();
-            }
-        }
+        // Legacy hardcoded GetNextComets(country, timezone) has been removed.
+        // Comet forecasts are now produced by AboveMe.Services.CometService
+        // (see FetchCometsAsync in Pages/Home.razor).
     }
 }
