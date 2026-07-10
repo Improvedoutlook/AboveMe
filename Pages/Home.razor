@@ -213,7 +213,7 @@
                 <ul class="list-unstyled" style="color:#fff;">
                 @foreach (CometForecast comet in VisibleComets)
                 {
-                    <li class="comet-item" style="margin-bottom: 1.25em; padding: 1em 1.2em; background: rgba(255,255,255,0.06); border-radius: 8px; text-align: left;">
+                    <li class="comet-item" style="margin-bottom: 1.25em; padding: 1.25em 1.4em; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37); color: #fff; text-align: left;">
                         <div style="font-weight: bold; font-size: 1.1em;">
                             Comet @comet.Name <span style="color:#aaa; font-weight: normal;">(@comet.Designation)</span>
                             <span style="background:@GetStatusColor(comet.DisplayStatus); color:#fff; padding: 0.15em 0.55em; border-radius: 4px; font-size: 0.7em; margin-left:0.4em; vertical-align: middle;">@comet.DisplayStatus</span>
@@ -274,7 +274,7 @@
                 {
                     var asteroid = VisibleAsteroids[i];
                     string borderColor = asteroid.IsPotentiallyHazardous ? "#dc3545" : "#0d6efd";
-                    <li class="asteroid-card" style="background: rgba(255,255,255,0.06); border-radius: 10px; padding: 1em 1.2em; margin-bottom: 1.2em; border-left: 4px solid @borderColor; color: #fff; text-align: left;">
+                    <li class="asteroid-card" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-left: 4px solid @borderColor; border-radius: 12px; padding: 1.25em 1.4em; margin-bottom: 1.25em; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37); color: #fff; text-align: left;">
                         <div style="display:flex; justify-content:space-between; align-items:baseline; gap:.5em; flex-wrap:wrap;">
                             <strong style="font-size:1.05em;">@asteroid.Name</strong>
                             @if (asteroid.IsPotentiallyHazardous)
