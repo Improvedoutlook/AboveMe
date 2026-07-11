@@ -721,12 +721,6 @@
 
     </div>
 
-    <div class="form-group mt-3">
-
-        <button class="btn btn-primary" @onclick="ToggleAurora">@((showAurora ? "Hide" : "Show") + " Aurora Borealis")</button>
-
-    </div>
-
     @if (showMeteorShowers)
 
     {
@@ -838,6 +832,12 @@
         </div>
 
     }
+
+    <div class="form-group mt-3">
+
+        <button class="btn btn-primary" @onclick="ToggleAurora">@((showAurora ? "Hide" : "Show") + " Aurora Borealis")</button>
+
+    </div>
 
 </div>
 
