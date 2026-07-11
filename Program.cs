@@ -16,6 +16,11 @@ builder.Services.AddScoped<LocalStorageService>();
 // Register CometService for fetching the curated comet visibility catalog
 builder.Services.AddScoped<CometService>();
 
+// Register EclipseService for the combined Solar + Lunar eclipse data panel.
+// Live data from USNO AA (solar only) is merged with the bundled NASA GSFC
+// catalog (solar fallback + all lunar) in wwwroot/eclipses-catalog.json.
+builder.Services.AddScoped<EclipseService>();
+
 // Load environment-specific configuration only in Development
 // In Production (GitHub Pages), API keys are injected into appsettings.json by the CI/CD workflow
 if (builder.HostEnvironment.IsDevelopment())

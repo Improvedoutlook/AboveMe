@@ -137,28 +137,6 @@ namespace AboveMe.Pages
             };
         }
 
-        public static string GetNextLunarEclipse(string? country, string? timezone)
-        {
-            DateTime[] eclipses = new[]
-            {
-                new DateTime(2023, 5, 5), new DateTime(2023, 10, 28), new DateTime(2024, 3, 25), new DateTime(2024, 9, 18),
-                new DateTime(2025, 3, 14), new DateTime(2025, 9, 7), new DateTime(2026, 3, 3), new DateTime(2026, 8, 28),
-                new DateTime(2027, 2, 20), new DateTime(2027, 8, 17), new DateTime(2028, 1, 12), new DateTime(2028, 7, 6),
-                new DateTime(2028, 12, 31), new DateTime(2029, 6, 26), new DateTime(2029, 12, 20), new DateTime(2030, 6, 15),
-                new DateTime(2030, 12, 9), new DateTime(2031, 6, 4), new DateTime(2031, 11, 29), new DateTime(2032, 5, 24),
-                new DateTime(2032, 11, 18), new DateTime(2033, 5, 14), new DateTime(2033, 11, 8), new DateTime(2034, 5, 4),
-                new DateTime(2034, 10, 29), new DateTime(2035, 4, 24), new DateTime(2035, 10, 18)
-            };
-            DateTime now = DateTime.UtcNow;
-            DateTime next = eclipses.FirstOrDefault(d => d > now);
-            if (next != default)
-                return $"Next visible lunar eclipse: {next:dd/MM/yyyy}";
-            DateTime last = eclipses.LastOrDefault(d => d <= now);
-            if (last != default)
-                return $"Last visible lunar eclipse: {last:dd/MM/yyyy}";
-            return "No lunar eclipse data available.";
-        }
-
         public static List<string> GetVisibleConstellations(string? country, string? timezone)
         {
             if (!string.IsNullOrEmpty(country))

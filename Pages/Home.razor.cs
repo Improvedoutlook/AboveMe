@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AboveMe.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace AboveMe.Pages
@@ -402,6 +403,118 @@ namespace AboveMe.Pages
             return auroraData.UserLat >= 0
                 ? "Look toward the northern horizon for the best chance of seeing aurora from your latitude."
                 : "Look toward the southern horizon for the best chance of seeing aurora from your latitude.";
+        }
+
+        // ---- Solar + Lunar Eclipse panel -------------------------------
+
+        /// <summary>DI for the eclipse data service. Solar data lives at USNO, lunar data at the bundled catalog.</summary>
+        [Inject] AboveMe.Services.EclipseService EclipseSvc { get; set; } = default!;
+
+        private bool showEclipse = false;
+        private bool isLoadingEclipse = false;
+        private string EclipseError = string.Empty;
+        private AboveMe.Services.EclipseTimeline eclipses = new();
+
+        /// <summary>
+        /// Toggles the Eclipse Data panel. On open, fetches the upcoming
+        /// solar + lunar timeline. Unlike the aurora/comet flows there's no
+        /// coordinate-gating — eclipses are global — so no permission prompt
+        /// is required.
+        /// </summary>
+        async Task ToggleEclipse()
+        {
+            showEclipse = !showEclipse;
+            if (showEclipse)
+            {
+                await FetchEclipsesAsync();
+            }
+        }
+
+        /// <summary>
+        /// Loads the merged upcoming-eclipse timeline from
+        /// <see cref="EclipseSvc"/>, which overlays live USNO solar-year
+        /// responses onto the bundled NASA GSFC catalog (sole lunar source +
+        /// solar fallback). Network failures are non-fatal: the service
+        /// silently falls back to the bundled catalog for solar eclipses.
+        /// <para>
+        /// The service uses up to three location signals in priority order:
+        /// (1) shared browser geolocation (best), (2) timezone id from the
+        /// dropdown, (3) country name. With latitude, the panel splits the
+        /// timeline into "Visible from your hemisphere" vs. "Elsewhere",
+        /// optionally narrowed further by timezone/country so users who
+        /// only set a timezone don't get a hemisphere-wide dump of events
+        /// halfway across the world.
+        /// </para>
+        /// </summary>
+        async Task FetchEclipsesAsync()
+        {
+            if (isLoadingEclipse) return;
+
+            isLoadingEclipse = true;
+            EclipseError = string.Empty;
+            StateHasChanged();
+
+            try
+            {
+                double? userLat = null;
+                if (!string.IsNullOrWhiteSpace(userLatitude) &&
+                    double.TryParse(userLatitude, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsedLat))
+                {
+                    userLat = parsedLat;
+                }
+                double? userLon = null;
+                if (!string.IsNullOrWhiteSpace(userLongitude) &&
+                    double.TryParse(userLongitude, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsedLon))
+                {
+                    userLon = parsedLon;
+                }
+
+                eclipses = await EclipseSvc.GetUpcomingEclipsesAsync(
+                    userLat,
+                    userLon,
+                    timezoneId: selectedTimezone,
+                    countryName: selectedCountry);
+                int visibleCount = eclipses?.VisibleFromYourHemisphere?.Count ?? 0;
+                int elsewhereCount = eclipses?.Elsewhere?.Count ?? 0;
+                if (eclipses == null || (visibleCount == 0 && elsewhereCount == 0))
+                {
+                    EclipseError = "No upcoming eclipse data available right now. Try again later.";
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"eclipses fetch failed: {ex.Message}");
+                EclipseError = $"Error loading eclipse data: {ex.Message}";
+            }
+            finally
+            {
+                isLoadingEclipse = false;
+                StateHasChanged();
+            }
+        }
+
+        /// <summary>
+        /// Single-string render mode the Razor template dispatches on via
+        /// <c>@switch (EclipseRenderMode)</c>. Centralizing the conditions
+        /// keeps the markup free of multi-line boolean expressions which
+        /// were tripping up the Razor parser in the previous implementation.
+        /// </summary>
+        private string EclipseRenderMode
+        {
+            get
+            {
+                if (isLoadingEclipse) return "loading";
+                if (!string.IsNullOrEmpty(EclipseError)) return "error";
+
+                int visibleCount = eclipses?.VisibleFromYourHemisphere?.Count ?? 0;
+                int elsewhereCount = eclipses?.Elsewhere?.Count ?? 0;
+                if (eclipses == null || (visibleCount == 0 && elsewhereCount == 0)) return "empty";
+
+                // The service populates HasLocationHint=true when latitude is
+                // supplied; otherwise the timeline is unsplit (everything in
+                // VisibleFromYourHemisphere, nowhere in Elsewhere).
+                return eclipses!.HasLocationHint ? "split" : "flat";
+            }
         }
     }
 }

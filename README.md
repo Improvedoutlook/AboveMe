@@ -1,13 +1,13 @@
 # AboveMe
 
-AboveMe is a Blazor WebAssembly (ASP.NET Core 9) app that uses your location to surface astronomy data you'll actually look at: lunar phases, the next lunar eclipse, NASA's Astronomy Picture of the Day, a curated gallery of James Webb Space Telescope images, latitude-filtered comet forecasts, and the upcoming meteor showers visible from your hemisphere. The whole UI sits on top of an animated, twinkling starry background.
+AboveMe is a Blazor WebAssembly (ASP.NET Core 9) app that uses your location to surface astronomy data you'll actually look at: lunar phases, upcoming Solar + Lunar eclipses, NASA's Astronomy Picture of the Day, a curated gallery of James Webb Space Telescope images, latitude-filtered comet forecasts, the upcoming meteor showers visible from your hemisphere, and a real-time NOAA OVATION aurora viewing probability. The whole UI sits on top of an animated, twinkling starry background.
 
 ## Features
 
 Each section is a toggle button — open only what you want, and the rest stays collapsed.
 
 - **Moon Data** — current phase (with image), illumination percentage, moonrise / moonset, sunrise / sunset, solar noon, day length, and the local time for your coordinates. Powered by the ipgeolocation.io astronomy endpoint.
-- **Next Lunar Eclipse** — date of the next visible lunar eclipse from a curated 2023–2035 list, plus a graceful fallback to "last visible" when none are in the future.
+- **Eclipse Data** — merged Solar + Lunar eclipse timeline (10 years, ~40 events) from USNO AA's live `year` endpoint for the authoritative Solar eclipse titles, overlaid on a curated NASA GSFC Five Millennium Canon-style catalog (2026–2035) bundled in `wwwroot/eclipses-catalog.json` that also covers every Lunar eclipse (USNO does not expose a public lunar JSON endpoint). When you share your location, the list is split into **Visible from your hemisphere** vs. **Elsewhere** using a case-insensitive substring match against each event's `region_hint` (Northern: "North America", "Europe", "Asia", …; Southern: "Australia", "South America", "Antarctica", …); without a latitude it falls back to a single flat list. Each row shows the event kind (Total, Annular, Partial, Penumbral), date, USNO descriptive title when live, and a region hint. **Solar eclipses also get a per-location overlay row** (📍 `M:0.382 · 38.2% obscuration from your location @ 2026-08-12 17:30 UT`) sourced from USNO's `/api/eclipses/solar/date?date=YYYY-MM-DD&coords=LAT,LON`, fired in parallel (capped at 3 in-flight) for solar eclipses in your hemisphere within the next 10 years, cached per (date, lat@F2, lon@F2) in `localStorage`, and silently falling back to `region_hint` when USNO 500s/times out/returns no-event. The catalog is bundled as `wwwroot/eclipses-catalog.json` (same `eclipses-catalog.json`-keyed localStorage cache pattern as the comet list), so the panel works offline and degrades gracefully if USNO is unreachable.
 - **Astronomy Picture of the Day** — NASA's APOD for today, with full image, title, and explanation. Video APODs render as a `<video>` tag for direct media, an embedded `iframe` for YouTube, or a fallback link when the host blocks framing.
 - **James Webb Space Telescope Gallery** — 30 curated JWST images with descriptions, each loaded from the project's `wwwroot/Webb Space Telescope Images/` directory. Toggling the section advances to the next image in the list, so repeatedly clicking "Show Webb Space Telescope" walks you through the gallery.
 - **Comet Data** — curated forecast catalog sourced from JPL Horizons with named comets (Tsuchinshan-ATLAS, ATLAS, Encke, Olbers, Churyumov-Gerasimenko, …). Each entry shows designation, status pill (`Upcoming` / `Active` / `Past` derived from the current UTC date), perihelion date, peak window, peak magnitude, summary, and notes. The list is filtered to the comets visible from your latitude.
@@ -27,7 +27,8 @@ Each section is a toggle button — open only what you want, and the rest stays 
 | Section | Source | Auth |
 | --- | --- | --- |
 | Moon Data | `https://api.ipgeolocation.io/v2/astronomy` | API key |
-| Lunar Eclipse | Curated 2023–2035 list (static) | — |
+| Eclipse Data (Solar) | `https://aa.usno.navy.mil/api/eclipses/solar/year?year=YYYY` (live) + `wwwroot/eclipses-catalog.json` (fallback) | — (no key; CORS-enabled) |
+| Eclipse Data (Lunar) | `wwwroot/eclipses-catalog.json` (curated from NASA GSFC) | — |
 | NASA APOD | `https://api.nasa.gov/planetary/apod` | API key (`DEMO_KEY` fallback) |
 | Asteroid Data | `https://api.nasa.gov/neo/rest/v1/feed` | API key (same `NasaApiKey`, `DEMO_KEY` fallback) |
 | Webb gallery | `wwwroot/Webb Space Telescope Images/` (curated 1–30) | — |
@@ -79,12 +80,14 @@ AboveMe/
 │   └── Weather.razor       # Default Blazor template scaffold
 ├── Services/
 │   ├── CometService.cs     # Loads & latitude-filters the comet catalog
+│   ├── EclipseService.cs   # Builds merged Solar+Lunar eclipse timeline (USNO live + bundled NASA catalog)
 │   └── LocalStorageService.cs
 ├── wwwroot/
 │   ├── stars/              # Starry background assets
 │   ├── moonphases/         # Moon phase image set
 │   ├── Webb Space Telescope Images/   # JWST gallery (numbered 1–30 + Descriptions/)
 │   ├── comets-forecasts.json          # Curated JPL Horizons-derived comet catalog
+│   ├── eclipses-catalog.json          # Curated NASA GSFC Solar+Lunar eclipse catalog (2026–2035)
 │   ├── appsettings.json    # API keys (injected by CI for production)
 │   ├── getUserLocation.js  # Browser geolocation JS Interop
 │   └── starry.js           # Animated background
@@ -100,7 +103,9 @@ AboveMe/
 - **Comet catalog** — refresh `wwwroot/comets-forecasts.json` quarterly with data pulled from `https://ssd-api.jpl.nasa.gov/sbdb.api` (each entry keeps its `JplCommand` so a future live-enrichment layer can call JPL Horizons).
 - **Webb gallery** — drop new images into `wwwroot/Webb Space Telescope Images/` and append a matching entry to the `WebbImages` list in `Pages/Home.razor`.
 - **Meteor showers** — update `AllMeteorShowers` in `Pages/Home.razor` with the latest AMS calendar each year. Each entry keeps `HemisphereVisibility` (Northern, Southern, or All) so the filter still works.
-- **Lunar eclipse list** — extend the `DateTime[]` array in `GetNextLunarEclipse()` for new years.
+- **Eclipse catalog** — extend `wwwroot/eclipses-catalog.json` to add upcoming events. Each entry has `type` (`Solar` or `Lunar`), `kind` (`Total` / `Annular` / `Partial` / `Penumbral`), `date` (ISO `YYYY-MM-DD`), and `region_hint` (free text describing visibility). New solar entries in the catalog get overlaid with USNO's authoritative title automatically when USNO is reachable.
+- **Eclipse hemisphere split** — the substring-match logic lives in the `NorthernKeywords` and `SouthernKeywords` arrays at the top of `Services/EclipseService.cs`. Add new phrases to either array (lowercase or title case both work) and the splitter will route matching `region_hint` entries into the right bucket the next time the panel opens.
+
 - **Styling** — theme colors and the starry background live in `wwwroot/app.css` and `wwwroot/starry.js`.
 
 ## Notes for Contributors
