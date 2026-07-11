@@ -225,7 +225,20 @@ namespace AboveMe.Services
             // surfaces overlay data the user can plausibly act on. Best-effort
             // overlay — failures collapse silently to <c>LocationOverlay = null</c>
             // so the UI falls back to <see cref="EclipseEvent.RegionHint"/>.
+            // As a side effect it also flags solar events that USNO confirms
+            // are NOT visible from the user's exact coordinates, which the
+            // reclassification step below acts on.
             await OverlayLocalCircumstancesAsync(timeline, userLatitude, userLongitude);
+
+            // Promote the per-location obscuration signal from display-only to
+            // an actual filter: any solar event USNO computed as not visible
+            // from the user's precise coordinates drops out of the "visible"
+            // bucket into "Elsewhere". This is what makes the solar list
+            // location-specific instead of hemisphere-generic. We ONLY demote
+            // on a definitive USNO "not in path" answer — a null overlay
+            // (network failure, out-of-range date, lunar) is left in place so
+            // a transient hiccup never hides a real event.
+            DemoteConfirmedNotVisibleSolar(timeline);
 
             return timeline;
         }
@@ -267,11 +280,52 @@ namespace AboveMe.Services
                 new ParallelOptions { MaxDegreeOfParallelism = 3 },
                 async (e, cancellationToken) =>
                 {
-                    e.LocationOverlay = await FetchSolarDateAsync(
+                    var (overlay, visibility) = await FetchSolarDateAsync(
                         e.Date.Year, e.Date.Month, e.Date.Day,
                         userLat.Value, userLon.Value,
                         cancellationToken);
+
+                    // Only a visible reading carries a usable overlay; a
+                    // definitive "not in path" is recorded as a flag so the
+                    // reclassification step can move it out of the visible
+                    // bucket. Unknown (network failure / out-of-range) leaves
+                    // both untouched so we degrade to the region hint.
+                    if (visibility == LocalSolarVisibility.Visible)
+                    {
+                        e.LocationOverlay = overlay;
+                    }
+                    else if (visibility == LocalSolarVisibility.NotInPath)
+                    {
+                        e.ConfirmedNotVisibleAtLocation = true;
+                    }
                 });
+        }
+
+        /// <summary>
+        /// Moves any solar event flagged <see cref="EclipseEvent.ConfirmedNotVisibleAtLocation"/>
+        /// (i.e. USNO computed zero visibility from the user's exact
+        /// coordinates) out of <see cref="EclipseTimeline.VisibleFromYourHemisphere"/>
+        /// and into <see cref="EclipseTimeline.Elsewhere"/>, keeping both lists
+        /// sorted ascending by date. No-op when the timeline has no location
+        /// hint (nothing was overlaid) or nothing was flagged.
+        /// </summary>
+        static void DemoteConfirmedNotVisibleSolar(EclipseTimeline timeline)
+        {
+            if (!timeline.HasLocationHint) return;
+
+            var demoted = timeline.VisibleFromYourHemisphere
+                .Where(e => e.ConfirmedNotVisibleAtLocation)
+                .ToList();
+            if (demoted.Count == 0) return;
+
+            timeline.VisibleFromYourHemisphere = timeline.VisibleFromYourHemisphere
+                .Where(e => !e.ConfirmedNotVisibleAtLocation)
+                .ToList();
+
+            timeline.Elsewhere = timeline.Elsewhere
+                .Concat(demoted)
+                .OrderBy(e => e.Date.Date)
+                .ToList();
         }
 
         /// <summary>
@@ -509,6 +563,31 @@ namespace AboveMe.Services
         }
 
         /// <summary>
+        /// Three-way outcome of a per-location USNO <c>/solar/date</c> lookup.
+        /// The distinction between <see cref="NotInPath"/> and
+        /// <see cref="Unknown"/> is what lets the caller safely demote solar
+        /// events: only a definitive USNO "no eclipse here" (a computed answer,
+        /// not a failure) is allowed to hide an event from the visible bucket.
+        /// </summary>
+        private enum LocalSolarVisibility
+        {
+            /// <summary>USNO returned local circumstances with a positive
+            /// obscuration — the user can see at least a partial eclipse.</summary>
+            Visible,
+
+            /// <summary>USNO computed the point and it is outside the eclipse
+            /// path (an <c>error</c> body, or local data with zero obscuration).
+            /// A reliable "you will not see this" signal.</summary>
+            NotInPath,
+
+            /// <summary>We couldn't get a computed answer (HTTP failure,
+            /// timeout, malformed JSON, or an out-of-range date). Must NOT be
+            /// treated as "not visible" — the caller falls back to the region
+            /// hint and leaves the event where the hemisphere split put it.</summary>
+            Unknown
+        }
+
+        /// <summary>
         /// Fetches the USNO per-location <c>/solar/date</c> endpoint for one
         /// event at one observer point. Caches by <c>(date, lat@F2, lon@F2)</c>
         /// in <c>localStorage</c> under <c>eclipseSolarDate_v1:*</c> — magnitudes
@@ -516,15 +595,18 @@ namespace AboveMe.Services
         /// cache has no time-to-live; the <c>v1</c> key-version bump is the only
         /// invalidation lever if USNO changes the field names.
         /// <para>
-        /// Failures are swallowed: HTTP 500, timeout, malformed JSON, the
-        /// <c>"error"</c> short-circuit (USNO returns <c>{"error": "..."}</c> for
-        /// both "no eclipse that day" and out-of-bounds dates), and missing
-        /// <c>local_data</c> all return <c>null</c>. Only successful responses
-        /// are persisted to <c>localStorage</c> so a transient server hiccup
-        /// doesn't pin a negative result into cache indefinitely.
+        /// Returns a <see cref="LocalSolarVisibility"/> alongside the (possibly
+        /// null) overlay so the caller can distinguish "USNO says you can't see
+        /// this" (<see cref="LocalSolarVisibility.NotInPath"/>) from "we don't
+        /// know" (<see cref="LocalSolarVisibility.Unknown"/>): HTTP 500, timeout,
+        /// and malformed JSON are Unknown, while the <c>"error"</c> short-circuit
+        /// (USNO returns <c>{"error": "..."}</c> for a point outside the path) and
+        /// a zero-obscuration reading are NotInPath. Only successful,
+        /// path-carrying responses are persisted to <c>localStorage</c> so a
+        /// transient server hiccup doesn't pin a negative result into cache.
         /// </para>
         /// </summary>
-        async Task<UsnoSolarDateResponse?> FetchSolarDateAsync(
+        async Task<(UsnoSolarDateResponse? Overlay, LocalSolarVisibility Visibility)> FetchSolarDateAsync(
             int year, int month, int day, double lat, double lon,
             CancellationToken externalToken = default)
         {
@@ -539,7 +621,13 @@ namespace AboveMe.Services
                     var cached = JsonSerializer.Deserialize<UsnoSolarDateResponse>(cachedJson);
                     if (cached?.Properties?.LocalData != null && cached.Properties.LocalData.Count > 0)
                     {
-                        return cached;
+                        // A cached entry is always a previously-successful,
+                        // path-carrying response, but an edge-of-path location
+                        // can still cache a zero-obscuration reading — classify
+                        // it the same way we would a fresh response.
+                        return HasPositiveObscuration(cached)
+                            ? (cached, LocalSolarVisibility.Visible)
+                            : (null, LocalSolarVisibility.NotInPath);
                     }
                 }
             }
@@ -564,7 +652,7 @@ namespace AboveMe.Services
                 if (!response.IsSuccessStatusCode)
                 {
                     Console.WriteLine($"USNO solar-date for {dateStr} returned {(int)response.StatusCode}. Falling back to region hint.");
-                    return null;
+                    return (null, LocalSolarVisibility.Unknown);
                 }
 
                 string rawJson = await response.Content.ReadAsStringAsync();
@@ -582,13 +670,28 @@ namespace AboveMe.Services
                 if (doc.RootElement.ValueKind == JsonValueKind.Object &&
                     doc.RootElement.TryGetProperty("error", out _))
                 {
-                    return null;
+                    // A computed "no eclipse at this point" — a reliable
+                    // not-visible answer (not a failure), so the caller may
+                    // demote the event. Deliberately not cached: USNO returns
+                    // the same shape for out-of-bounds dates, and we'd rather
+                    // retry than pin a false negative.
+                    return (null, LocalSolarVisibility.NotInPath);
                 }
 
                 var parsed = doc.RootElement.Deserialize<UsnoSolarDateResponse>();
                 if (parsed?.Properties?.LocalData == null || parsed.Properties.LocalData.Count == 0)
                 {
-                    return null;
+                    // Success status but no computed circumstances — treat as
+                    // unknown rather than not-visible so we don't hide an event
+                    // on an unexpected/empty payload.
+                    return (null, LocalSolarVisibility.Unknown);
+                }
+
+                // A path-carrying response with zero obscuration means the
+                // point is on the very edge / outside the visible path.
+                if (!HasPositiveObscuration(parsed))
+                {
+                    return (null, LocalSolarVisibility.NotInPath);
                 }
 
                 try
@@ -600,23 +703,38 @@ namespace AboveMe.Services
                     Console.WriteLine($"eclipses solar-date localStorage write failed ({dateStr}): {ex.Message}");
                 }
 
-                return parsed;
+                return (parsed, LocalSolarVisibility.Visible);
             }
             catch (OperationCanceledException)
             {
                 Console.WriteLine($"USNO solar-date for {dateStr} cancelled or timed out after {EarthEclipseNetworkTimeoutSeconds}s. Using region hint.");
-                return null;
+                return (null, LocalSolarVisibility.Unknown);
             }
             catch (JsonException ex)
             {
                 Console.WriteLine($"USNO solar-date for {dateStr} returned malformed JSON: {ex.Message}. Using region hint.");
-                return null;
+                return (null, LocalSolarVisibility.Unknown);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"USNO solar-date for {dateStr} failed: {ex.Message}. Using region hint.");
-                return null;
+                return (null, LocalSolarVisibility.Unknown);
             }
+        }
+
+        /// <summary>
+        /// True when a USNO <c>/solar/date</c> response contains a "Maximum
+        /// Eclipse" entry with a positive obscuration — i.e. the observer point
+        /// actually sees some of the Sun covered. Mirrors the guard in
+        /// <see cref="EclipseEvent.OverlayDisplay"/> so the filter and the
+        /// display agree on what counts as "visible from here".
+        /// </summary>
+        static bool HasPositiveObscuration(UsnoSolarDateResponse? response)
+        {
+            var max = response?.Properties?.LocalData?
+                .FirstOrDefault(d => d.Phenomenon
+                    .Equals("Maximum Eclipse", StringComparison.OrdinalIgnoreCase));
+            return max?.Obscuration is > 0;
         }
     }
 
@@ -701,6 +819,19 @@ namespace AboveMe.Services
         /// </summary>
         [JsonIgnore]
         public UsnoSolarDateResponse? LocationOverlay { get; set; }
+
+        /// <summary>
+        /// Set true only when USNO's per-location <c>/solar/date</c> endpoint
+        /// returned a definitive "no eclipse visible from these coordinates"
+        /// for this solar event (a computed answer, not a failure). Distinct
+        /// from <see cref="LocationOverlay"/> being null, which also covers
+        /// network failures, out-of-range dates, and lunar events that were
+        /// never queried — those must NOT be treated as "not visible". Used by
+        /// <c>EclipseService.DemoteConfirmedNotVisibleSolar</c> to move
+        /// confirmed-invisible solar events into the "Elsewhere" bucket.
+        /// </summary>
+        [JsonIgnore]
+        public bool ConfirmedNotVisibleAtLocation { get; set; }
 
         /// <summary>
         /// Compact formatted version of <see cref="LocationOverlay"/> for display

@@ -1,4 +1,4 @@
-@page "/"
+﻿@page "/"
 
 @using Microsoft.JSInterop
 
@@ -187,7 +187,7 @@
                         <div class="eclipse-list">
                             @foreach (var e in eclipses.VisibleFromYourHemisphere)
                             {
-                                <div class="eclipse-item" style="display:flex;flex-direction:column;gap:0.15rem;padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+                                <div class="eclipse-item eclipse-card @(e.Type == "Lunar" ? "eclipse-lunar" : "eclipse-solar")">
                                     <div class="eclipse-item-header">
                                         <span style="color:#fff;font-weight:600;">@e.Subtitle</span>
                                         <span style="color:#fff;"> &mdash; @e.Date.ToString("MMM d, yyyy")</span>
@@ -233,18 +233,19 @@
                     <div class="eclipse-section">
                         <h5 style="color:#fff;margin-top:0.5rem;margin-bottom:0.4rem;text-align:center;">
                             <span class="badge bg-success" style="font-size:0.85em;padding:0.4em 0.65em;vertical-align:middle;">@eclipses.VisibleFromYourHemisphere.Count</span>
-                            Visible from your @eclipses.Hemisphere hemisphere
+                            Likely visible from your location
+                            <span style="color:#aab;font-weight:400;font-size:0.85em;">(@eclipses.Hemisphere Hemisphere)</span>
                         </h5>
                         @if (eclipses.VisibleFromYourHemisphere.Count == 0)
                         {
-                            <div class="text-warning text-center">No upcoming eclipses clearly visible from your hemisphere. See "Elsewhere" below.</div>
+                            <div class="text-warning text-center">No upcoming eclipses are likely visible from your location. See "Elsewhere" below.</div>
                         }
                         else
                         {
                             <div class="eclipse-list">
                                 @foreach (var e in eclipses.VisibleFromYourHemisphere)
                                 {
-                                    <div class="eclipse-item" style="display:flex;flex-direction:column;gap:0.15rem;padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+                                    <div class="eclipse-item eclipse-card @(e.Type == "Lunar" ? "eclipse-lunar" : "eclipse-solar")">
                                         <div class="eclipse-item-header">
                                             <span style="color:#fff;font-weight:600;">@e.Subtitle</span>
                                             <span style="color:#fff;"> &mdash; @e.Date.ToString("MMM d, yyyy")</span>
@@ -282,7 +283,7 @@
                             <div class="eclipse-list">
                                 @foreach (var e in eclipses.Elsewhere)
                                 {
-                                    <div class="eclipse-item" style="display:flex;flex-direction:column;gap:0.15rem;padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+                                    <div class="eclipse-item eclipse-card eclipse-elsewhere @(e.Type == "Lunar" ? "eclipse-lunar" : "eclipse-solar")">
                                         <div class="eclipse-item-header">
                                             <span style="color:#d6d6d6;font-weight:600;">@e.Subtitle</span>
                                             <span style="color:#d6d6d6;"> &mdash; @e.Date.ToString("MMM d, yyyy")</span>

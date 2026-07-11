@@ -379,6 +379,31 @@ body {
 .moon-phase-display .moon-img {
     filter: drop-shadow(0 0 16px #fff8);
 }
+/* Eclipse records share the frosted-glass card look used by the Comet,
+   Asteroid, Meteor, and Aurora panels so every data section reads as one
+   system. Defined once here rather than repeated inline across the three
+   eclipse render blocks (flat / split-visible / split-elsewhere). */
+.eclipse-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 1.1rem 1.3rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+    color: #fff;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+/* Accent stripe by eclipse type, echoing the asteroid/aurora left border. */
+.eclipse-card.eclipse-solar { border-left: 4px solid #ffb84d; }
+.eclipse-card.eclipse-lunar { border-left: 4px solid #d98a8a; }
+/* The "Elsewhere" bucket is secondary — dim it a touch. */
+.eclipse-card.eclipse-elsewhere { opacity: 0.82; }
+
 .moon-phase-label {
     color: #fff;
     font-size: 1.2rem;
