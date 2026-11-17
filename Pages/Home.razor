@@ -352,7 +352,7 @@
 
             {
 
-                <div class="text-warning">Unable to load NASA data. Please check your API key and try again.</div>
+                <div class="text-warning">Unable to load the Astronomy Picture of the Day. Please try again later.</div>
 
             }
 
@@ -2728,76 +2728,98 @@
 
     }
 
+    // APOD moved from apod.nasa.gov to science.nasa.gov/apod in 2026, and the api.nasa.gov/planetary/apod
+    // scraper broke (500 for today, placeholder "NASA Science" data for dated requests). NASA's official
+    // APOD RSS feed is CORS-enabled and needs no API key, so read the newest item from it instead.
+    private const string ApodFeedUrl = "https://science.nasa.gov/feed/apod-basic/";
+    private static readonly System.Xml.Linq.XNamespace ApodNs = "https://science.nasa.gov/apod/";
+    // The feed only carries a still image, even on video days. The post body (WordPress REST API, CORS-enabled)
+    // holds the real media: a self-hosted <video><source src="...mp4"> or a YouTube/Vimeo <iframe>.
+    private const string ApodPostApiUrl = "https://science.nasa.gov/wp-json/wp/v2/image-article?_fields=content&slug=";
+    private static readonly System.Text.RegularExpressions.Regex ApodVideoSourceRegex =
+        new(@"<video\b[\s\S]*?<source[^>]*\ssrc=""([^""]+)""", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    private static readonly System.Text.RegularExpressions.Regex ApodEmbedRegex =
+        new(@"<iframe[^>]*\ssrc=""(https://(?:www\.)?(?:youtube(?:-nocookie)?\.com|player\.vimeo\.com)/[^""]+)""", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
     async Task FetchNasaDataAsync()
-
     {
-
         if (!IsNasaQueryChanged() && cachedNasaData != null)
-
         {
-
             nasaData = cachedNasaData;
-
             NasaError = string.Empty;
-
             return;
-
         }
-
-        if (string.IsNullOrWhiteSpace(nasaApiKey))
-
-        {
-
-            NasaError = "NASA API key is missing.";
-
-            return;
-
-        }
-
-        // For APOD, lat/lon are not required, so we just call the endpoint for the current date
-
-        string? url = $"https://api.nasa.gov/planetary/apod?api_key={nasaApiKey}";
 
         try
-
         {
+            string xml = await Http.GetStringAsync(ApodFeedUrl);
+            var item = System.Xml.Linq.XDocument.Parse(xml).Descendants("item").FirstOrDefault();
+            string? imageUrl = item?.Element(ApodNs + "hdurl")?.Value?.Trim();
 
-            HttpResponseMessage? response = await Http.GetAsync(url);
-
-            if (response.IsSuccessStatusCode)
-
+            if (item == null || string.IsNullOrWhiteSpace(imageUrl))
             {
-
-                string? json = await response.Content.ReadAsStringAsync();
-
-                nasaData = System.Text.Json.JsonSerializer.Deserialize<NasaApodData>(json, options: new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                cachedNasaData = nasaData;
-
-                UpdateLastNasaQuery();
-
-                NasaError = string.Empty;
-
+                NasaError = "Today's Astronomy Picture of the Day isn't available right now. Please check back later.";
+                return;
             }
 
-            else
-
+            nasaData = new NasaApodData
             {
-
-                NasaError = $"Currently, NASA APIs are experiencing an unscheduled outage. Users are advised to check back later for updates on the status of the APIs. data. Status: {response.StatusCode}";
-
-            }
-
+                Title = item.Element("title")?.Value?.Trim(),
+                Date = DateTimeOffset.TryParse(item.Element("pubDate")?.Value, out var published) ? published.ToString("yyyy-MM-dd") : null,
+                Explanation = HtmlToPlainText(item.Element(ApodNs + "explanation")?.Value, stripPrefix: "Explanation:"),
+                Copyright = HtmlToPlainText(item.Element(ApodNs + "copyright")?.Value),
+                Url = imageUrl,
+                HdUrl = imageUrl,
+                MediaType = "image"
+            };
+            await TryApplyApodVideoAsync(nasaData, item.Element("link")?.Value);
+            cachedNasaData = nasaData;
+            UpdateLastNasaQuery();
+            NasaError = string.Empty;
         }
-
-        catch (Exception ex)
-
+        catch (Exception)
         {
-
-            NasaError = $"Error: {ex.Message}";
-
+            NasaError = "Couldn't reach NASA's Astronomy Picture of the Day feed. Please check back later.";
         }
+    }
 
+    // Switches the APOD to video when the post's main media is a video. The feed image stays as the poster.
+    // Any failure leaves the APOD showing the still image, so the panel never breaks.
+    private async Task TryApplyApodVideoAsync(NasaApodData apod, string? postLink)
+    {
+        string? slug = Uri.TryCreate(postLink?.Trim(), UriKind.Absolute, out var postUri)
+            ? postUri.AbsolutePath.TrimEnd('/').Split('/').LastOrDefault()
+            : null;
+        if (string.IsNullOrWhiteSpace(slug)) return;
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(await Http.GetStringAsync(ApodPostApiUrl + Uri.EscapeDataString(slug)));
+            if (doc.RootElement.GetArrayLength() == 0) return;
+            string body = doc.RootElement[0].GetProperty("content").GetProperty("rendered").GetString() ?? string.Empty;
+
+            var match = ApodVideoSourceRegex.Match(body);
+            if (!match.Success) match = ApodEmbedRegex.Match(body);
+            if (!match.Success) return;
+
+            apod.Url = System.Net.WebUtility.HtmlDecode(match.Groups[1].Value);
+            apod.MediaType = "video";
+        }
+        catch (Exception)
+        {
+            // Keep the still image.
+        }
+    }
+
+    // Feed fields are HTML fragments; render them as plain text so default Razor encoding stays on.
+    private static string? HtmlToPlainText(string? html, string? stripPrefix = null)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return null;
+        string text = System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Replace(html, "<[^>]+>", " "));
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
+        if (stripPrefix != null && text.StartsWith(stripPrefix, StringComparison.OrdinalIgnoreCase))
+            text = text[stripPrefix.Length..].TrimStart();
+        return text;
     }
 
     // Helpers for APOD media handling
